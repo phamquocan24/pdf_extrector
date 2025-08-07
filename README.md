@@ -27,28 +27,28 @@
                                               │   AI Models     │
                                               │ ┌─────────────┐ │
                                               │ │Table Model  │ │
-                                              │ │Row/Col Model│ │
                                               │ │ Cell Model  │ │
+                                              │ │OCR Extraction│ │
                                               │ └─────────────┘ │
                                               └─────────────────┘
 ```
 
-### 🧠 AI Models Pipeline
+### 🧠 AI Models Pipeline (3-Phase Workflow)
 
-1. **Table Detection Model** (`best(table).pt`)
+1. **Phase 1: Table Detection Model** (`best(table).pt`)
    - Phát hiện vùng bảng trong PDF
    - Confidence: 66-88%
    - Output: Bounding boxes của các bảng
 
-2. **Structure Detection Model** (`best(rowxcolumn).pt`)
-   - Nhận dạng cấu trúc rows/columns
-   - Confidence: 80-90%
-   - Output: Tọa độ rows và columns
-
-3. **Cell Detection Model** (`best(cell).pt`)
-   - Phát hiện từng cell riêng lẻ
+2. **Phase 2: Cell Detection Model** (`best(cell).pt`)
+   - Phát hiện và segment từng cell riêng lẻ
    - Confidence: 30-90%
    - Output: Boundaries chính xác của cells
+
+3. **Phase 3: OCR Text Extraction**
+   - Trích xuất text từ từng cell đã segment
+   - Method: PyMuPDF text extraction
+   - Output: Text content cho từng cell
 
 ## 🛠️ Tech Stack
 
@@ -91,7 +91,6 @@ Final_term/
 │   ├── controllers/           # Route controllers
 │   ├── models/               # AI model files
 │   │   ├── best(table).pt    # Table detection model
-│   │   ├── best(rowxcolumn).pt # Structure model
 │   │   └── best(cell).pt     # Cell detection model
 │   ├── python_service/       # Python AI service
 │   │   ├── app.py           # FastAPI application
@@ -186,13 +185,13 @@ npm run dev
 - **TXT**: Xuất text thuần từ các cells
 - **JSON**: Xuất toàn bộ metadata và confidence scores
 
-## 🎯 Hiệu suất AI Models
+## 🎯 Hiệu suất AI Models (3-Phase Workflow)
 
-| Model | Chức năng | Confidence Range | Performance |
-|-------|-----------|------------------|-------------|
-| Table Detection | Phát hiện vùng bảng | 66-88% | ⭐⭐⭐⭐ |
-| Structure Detection | Nhận dạng rows/cols | 80-90% | ⭐⭐⭐⭐⭐ |
-| Cell Detection | Trích xuất cells | 30-90% | ⭐⭐⭐⭐ |
+| Phase | Model | Chức năng | Confidence Range | Performance |
+|-------|-------|-----------|------------------|-------------|
+| 1 | Table Detection | Phát hiện vùng bảng | 66-88% | ⭐⭐⭐⭐ |
+| 2 | Cell Detection | Segment cells | 30-90% | ⭐⭐⭐⭐ |
+| 3 | OCR Extraction | Trích xuất text | N/A | ⭐⭐⭐ |
 
 ## 🔧 API Documentation
 
@@ -216,12 +215,6 @@ curl -X POST -F "file=@document.pdf" http://localhost:8080/api/upload
       "table_detection": {
         "confidence": 0.85,
         "bbox": [100, 200, 500, 600]
-      },
-      "structure_detection": {
-        "rows_detected": 2,
-        "cols_detected": 2,
-        "rows_confidence": [0.9, 0.8],
-        "cols_confidence": [0.85, 0.9]
       },
       "cell_detection": {
         "cells_detected": 4,
@@ -251,7 +244,7 @@ response = requests.post('http://localhost:8001/api/extract', files=files)
 ```bash
 # Kiểm tra file models
 ls backend/models/
-# Đảm bảo có 3 files: best(table).pt, best(rowxcolumn).pt, best(cell).pt
+# Đảm bảo có 2 files: best(table).pt, best(cell).pt
 ```
 
 #### 2. Python service lỗi

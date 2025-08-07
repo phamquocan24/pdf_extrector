@@ -26,11 +26,16 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Avatar,
+  Modal,
+  Backdrop,
+  Fade,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
   TableChart as TableIcon,
   GridOn as CellIcon,
+  GridOn as GridOnIcon,
   TextFields as TextIcon,
   Visibility as ViewIcon,
   Code as CodeIcon,
@@ -52,10 +57,22 @@ const PreviewPage = () => {
   const [extractedData, setExtractedData] = useState(null);
   const [fileName, setFileName] = useState('');
   const [downloadAnchorEl, setDownloadAnchorEl] = useState(null);
+  const [imageModal, setImageModal] = useState({ open: false, src: '', title: '' });
 
   useEffect(() => {
     // Get data from route state or localStorage
     if (location.state && location.state.data) {
+      console.log('Preview page received data:', location.state.data);
+      // Log visualization data specifically
+      location.state.data.forEach((table, index) => {
+        console.log(`Table ${index + 1} visualizations:`, table.visualizations);
+        if (table.visualizations?.table_detection_image) {
+          console.log(`Table ${index + 1} has table detection image (length: ${table.visualizations.table_detection_image.length})`);
+        }
+        if (table.visualizations?.cell_segmentation_image) {
+          console.log(`Table ${index + 1} has cell segmentation image (length: ${table.visualizations.cell_segmentation_image.length})`);
+        }
+      });
       setExtractedData(location.state.data);
       setFileName(location.state.fileName || 'Unknown File');
     } else {
@@ -70,6 +87,14 @@ const PreviewPage = () => {
 
   const handleDownloadMenuClose = () => {
     setDownloadAnchorEl(null);
+  };
+
+  const handleImageClick = (src, title) => {
+    setImageModal({ open: true, src, title });
+  };
+
+  const handleImageModalClose = () => {
+    setImageModal({ open: false, src: '', title: '' });
   };
 
   const downloadFile = (content, filename, contentType) => {
@@ -106,21 +131,12 @@ const PreviewPage = () => {
         table.data?.length || 0,
         table.data?.[0]?.length || 0,
         table.table_detection?.confidence ? (table.table_detection.confidence * 100).toFixed(1) + '%' : 'N/A',
-        table.structure_detection?.rows_confidence ? 
-          (table.structure_detection.rows_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.rows_confidence.length * 100).toFixed(1) + '%' : 'N/A',
-        table.structure_detection?.cols_confidence ? 
-          (table.structure_detection.cols_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.cols_confidence.length * 100).toFixed(1) + '%' : 'N/A',
-        table.structure_detection?.rows_confidence && table.structure_detection?.cols_confidence ? 
-          (((table.structure_detection.rows_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.rows_confidence.length + 
-             table.structure_detection.cols_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.cols_confidence.length) / 2) * 100).toFixed(1) + '%' : 'N/A',
-        table.table_detection?.confidence && table.structure_detection?.rows_confidence && table.structure_detection?.cols_confidence ? 
-          (((table.table_detection.confidence + 
-             table.structure_detection.rows_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.rows_confidence.length + 
-             table.structure_detection.cols_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.cols_confidence.length) / 3) * 100).toFixed(1) + '%' : 'N/A',
-        table.structure_detection?.rows_confidence && table.structure_detection?.cols_confidence ? 
-          (Math.min(...table.structure_detection.rows_confidence, ...table.structure_detection.cols_confidence) * 100).toFixed(1) + '%' : 'N/A',
-        table.structure_detection?.rows_confidence && table.structure_detection?.cols_confidence ? 
-          (Math.max(...table.structure_detection.rows_confidence, ...table.structure_detection.cols_confidence) * 100).toFixed(1) + '%' : 'N/A',
+        'N/A', // Structure detection removed
+        'N/A', // Structure detection removed  
+        'N/A', // Structure detection removed
+        table.table_detection?.confidence ? (table.table_detection.confidence * 100).toFixed(1) + '%' : 'N/A',
+        'N/A', // Structure detection removed
+        'N/A', // Structure detection removed
         table.cell_detection?.method || 'structure_based',
         table.cell_detection?.cells_detected || 0,
         table.cell_detection?.cells_confidence ? 
@@ -194,7 +210,7 @@ const PreviewPage = () => {
           <Box sx={{ p: 1 }}>
             {/* Table Detection Info */}
             <Typography variant="body2" color="primary" gutterBottom sx={{ fontWeight: 600 }}>
-              📋 Table Detection: {table.table_detection?.status === 'detected' ? '✅ Hoạt động' : '⚠️ Fallback'}
+              📋 Table Detection: ✅ AI Model Detection
             </Typography>
             {table.table_detection && (
               <Box sx={{ mb: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
@@ -221,84 +237,7 @@ const PreviewPage = () => {
               </Box>
             )}
 
-            {/* Structure Detection Info */}
-            <Typography variant="body2" color="secondary" gutterBottom sx={{ fontWeight: 600 }}>
-              🏗️ Structure Detection: {table.structure_detection?.method === 'ai_model' ? '✅ Hoạt động' : '⚠️ Fallback'}
-            </Typography>
-            {table.structure_detection && (
-              <Box sx={{ mb: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 1 }}>
-                  <Chip 
-                    label={`Rows: ${table.structure_detection.rows_detected}`} 
-                    size="small" 
-                    color="info"
-                  />
-                  <Chip 
-                    label={`Cols: ${table.structure_detection.cols_detected}`} 
-                    size="small" 
-                    color="info"
-                  />
-                  {table.structure_detection.model_used && (
-                    <Chip 
-                      label={`Model: ${table.structure_detection.model_used}`} 
-                      size="small" 
-                      variant="outlined"
-                    />
-                  )}
-                </Box>
-                {table.structure_detection.rows_confidence && (
-                  <Box sx={{ mt: 1 }}>
-                    <Typography variant="caption" color="text.secondary">
-                      Độ tin cậy chi tiết:
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
-                      <Chip 
-                        label={`Rows avg: ${(table.structure_detection.rows_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.rows_confidence.length * 100).toFixed(1)}%`}
-                        size="small"
-                        color="success"
-                        variant="outlined"
-                      />
-                      <Chip 
-                        label={`Cols avg: ${(table.structure_detection.cols_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.cols_confidence.length * 100).toFixed(1)}%`}
-                        size="small"
-                        color="success"
-                        variant="outlined"
-                      />
-                      <Chip 
-                        label={`Min: ${(Math.min(...table.structure_detection.rows_confidence, ...table.structure_detection.cols_confidence) * 100).toFixed(1)}%`}
-                        size="small"
-                        color="warning"
-                        variant="outlined"
-                      />
-                      <Chip 
-                        label={`Max: ${(Math.max(...table.structure_detection.rows_confidence, ...table.structure_detection.cols_confidence) * 100).toFixed(1)}%`}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                    </Box>
-                    <Box sx={{ mt: 1 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Quality Score: 
-                      </Typography>
-                      <Chip 
-                        label={`${((table.table_detection.confidence + 
-                                  table.structure_detection.rows_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.rows_confidence.length + 
-                                  table.structure_detection.cols_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.cols_confidence.length) / 3 * 100).toFixed(1)}%`}
-                        size="small"
-                        color={((table.table_detection.confidence + 
-                                table.structure_detection.rows_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.rows_confidence.length + 
-                                table.structure_detection.cols_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.cols_confidence.length) / 3) > 0.8 ? 'success' : 
-                               ((table.table_detection.confidence + 
-                                table.structure_detection.rows_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.rows_confidence.length + 
-                                table.structure_detection.cols_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.cols_confidence.length) / 3) > 0.6 ? 'warning' : 'error'}
-                        sx={{ ml: 1, fontWeight: 'bold' }}
-                      />
-                    </Box>
-                  </Box>
-                )}
-              </Box>
-            )}
+
 
             {/* Data Summary */}
             <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -306,13 +245,16 @@ const PreviewPage = () => {
             </Typography>
             <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
               <Typography variant="body2">
-                Phương thức: <strong>{table.method === 'ai_model' ? 'AI Model' : 'Fallback'}</strong>
+                Phương thức: <strong>3-Phase AI Workflow</strong>
               </Typography>
               <Typography variant="body2">
                 Số hàng dữ liệu: <strong>{table.data?.length || 0}</strong>
               </Typography>
               <Typography variant="body2">
                 Số cột dữ liệu: <strong>{table.data?.[0]?.length || 0}</strong>
+              </Typography>
+              <Typography variant="body2">
+                Cells detected: <strong>{table.cell_detection?.cells_detected || 0}</strong>
               </Typography>
             </Box>
           </Box>
@@ -354,7 +296,7 @@ const PreviewPage = () => {
                 <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>Phương thức</TableCell>
                 <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>Rows x Cols</TableCell>
                 <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>Table Confidence</TableCell>
-                <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>Avg Structure Confidence</TableCell>
+
                 <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>Cell Detection</TableCell>
               </TableRow>
             </TableHead>
@@ -366,9 +308,9 @@ const PreviewPage = () => {
                   <TableCell>{table.page || 'N/A'}</TableCell>
                   <TableCell>
                     <Chip 
-                      label={table.method === 'ai_model' ? 'AI' : 'Fallback'}
+                      label="3-Phase AI"
                       size="small"
-                      color={table.method === 'ai_model' ? 'success' : 'warning'}
+                      color="success"
                     />
                   </TableCell>
                   <TableCell>
@@ -391,28 +333,7 @@ const PreviewPage = () => {
                       <Chip label="N/A" size="small" variant="outlined" />
                     )}
                   </TableCell>
-                  <TableCell>
-                    {table.structure_detection?.rows_confidence && table.structure_detection?.cols_confidence ? (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                        <Chip 
-                          label={`R: ${(table.structure_detection.rows_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.rows_confidence.length * 100).toFixed(1)}%`}
-                          size="small"
-                          color="info"
-                          variant="outlined"
-                          sx={{ fontSize: '0.7rem', height: '20px' }}
-                        />
-                        <Chip 
-                          label={`C: ${(table.structure_detection.cols_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.cols_confidence.length * 100).toFixed(1)}%`}
-                          size="small"
-                          color="info"
-                          variant="outlined"
-                          sx={{ fontSize: '0.7rem', height: '20px' }}
-                        />
-                      </Box>
-                    ) : (
-                      <Chip label="N/A" size="small" variant="outlined" />
-                    )}
-                  </TableCell>
+
                   <TableCell>
                     {table.cell_detection && table.cell_detection.cells_detected > 0 ? (
                       <Chip 
@@ -426,7 +347,7 @@ const PreviewPage = () => {
                       />
                     ) : (
                       <Chip 
-                        label="Structure-based"
+                        label="No cells"
                         size="small"
                         color="default"
                         variant="outlined"
@@ -507,9 +428,9 @@ const PreviewPage = () => {
             </Paper>
             <Box sx={{ mt: 2, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
               <Chip 
-                label={`Phương thức: ${table.method === 'ai_model' ? 'AI Model' : 'Fallback'}`} 
+                label="Phương thức: 3-Phase AI Workflow" 
                 size="small" 
-                color={table.method === 'ai_model' ? 'success' : 'warning'}
+                color="success"
               />
               {table.table_detection && (
                 <Chip 
@@ -518,29 +439,7 @@ const PreviewPage = () => {
                   color={table.table_detection.confidence > 0.7 ? 'success' : table.table_detection.confidence > 0.5 ? 'warning' : 'error'}
                 />
               )}
-              {table.structure_detection && table.structure_detection.rows_confidence && (
-                <>
-                  <Chip 
-                    label={`Structure: ${((table.structure_detection.rows_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.rows_confidence.length + 
-                             table.structure_detection.cols_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.cols_confidence.length) / 2 * 100).toFixed(1)}%`} 
-                    size="small" 
-                    color="info"
-                  />
-                  <Chip 
-                    label={`Quality: ${((table.table_detection.confidence + 
-                            table.structure_detection.rows_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.rows_confidence.length + 
-                            table.structure_detection.cols_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.cols_confidence.length) / 3 * 100).toFixed(1)}%`} 
-                    size="small" 
-                    color={((table.table_detection.confidence + 
-                            table.structure_detection.rows_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.rows_confidence.length + 
-                            table.structure_detection.cols_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.cols_confidence.length) / 3) > 0.8 ? 'success' : 
-                           ((table.table_detection.confidence + 
-                            table.structure_detection.rows_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.rows_confidence.length + 
-                            table.structure_detection.cols_confidence.reduce((a, b) => a + b, 0) / table.structure_detection.cols_confidence.length) / 3) > 0.6 ? 'warning' : 'error'}
-                    variant="filled"
-                  />
-                </>
-              )}
+
               {table.cell_detection && table.cell_detection.cells_detected > 0 && (
                 <Chip 
                   label={`Cells: ${table.cell_detection.cells_detected} (${(table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length * 100).toFixed(1)}%)`} 
@@ -731,6 +630,237 @@ const PreviewPage = () => {
           </CardContent>
         </Card>
 
+        {/* Table Detection and Cell Segmentation Visualizations */}
+        {extractedData && extractedData.length > 0 && (
+          <Grid container spacing={3} sx={{ mb: 3 }}>
+            {/* Table Detection Visualization */}
+            <Grid item xs={12} md={6}>
+              <Card 
+                sx={{ 
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: theme.shadows[6],
+                  }
+                }}
+              >
+                <CardHeader
+                  avatar={<TableIcon sx={{ color: 'white' }} />}
+                  title="Ảnh bảng đã phát hiện"
+                  subheader="Vùng bảng được AI model detect"
+                  sx={{ 
+                    bgcolor: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
+                    background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
+                    color: 'white',
+                    '& .MuiCardHeader-subheader': {
+                      color: 'white',
+                      opacity: 0.9
+                    }
+                  }}
+                />
+                <CardContent sx={{ p: 2 }}>
+                  <Grid container spacing={2}>
+                    {extractedData.map((table, index) => (
+                      <Grid item xs={12} sm={6} md={12} lg={6} key={index}>
+                        <Card variant="outlined" sx={{ borderRadius: 2 }}>
+                          <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+                              Trang {table.page} - Bảng {table.table}
+                            </Typography>
+                            {table.visualizations?.table_detection_image ? (
+                              <Box 
+                                component="img"
+                                src={table.visualizations.table_detection_image}
+                                alt={`Table detection page ${table.page} table ${table.table}`}
+                                onClick={() => handleImageClick(
+                                  table.visualizations.table_detection_image,
+                                  `Table Detection - Trang ${table.page}, Bảng ${table.table}`
+                                )}
+                                onError={(e) => {
+                                  console.error('Failed to load table detection image:', e);
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'flex';
+                                }}
+                                sx={{
+                                  width: '100%',
+                                  height: 'auto',
+                                  maxHeight: 200,
+                                  objectFit: 'contain',
+                                  borderRadius: 1,
+                                  border: '1px solid',
+                                  borderColor: 'grey.300',
+                                  cursor: 'pointer',
+                                  transition: 'transform 0.2s ease',
+                                  '&:hover': {
+                                    transform: 'scale(1.02)',
+                                    boxShadow: theme.shadows[4]
+                                  }
+                                }}
+                              />
+                            ) : null}
+                            {(!table.visualizations?.table_detection_image || table.visualizations?.error) && (
+                              <Box 
+                                sx={{
+                                  width: '100%',
+                                  height: 200,
+                                  bgcolor: 'grey.100',
+                                  borderRadius: 1,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  border: '1px solid',
+                                  borderColor: 'grey.300',
+                                  gap: 1
+                                }}
+                              >
+                                <Typography variant="body2" color="text.secondary">
+                                  {table.visualizations?.error ? 'Lỗi tạo ảnh visualization' : 'Không có ảnh visualization'}
+                                </Typography>
+                                {table.visualizations?.error && (
+                                  <Typography variant="caption" color="error" sx={{ textAlign: 'center', px: 1 }}>
+                                    {table.visualizations.error}
+                                  </Typography>
+                                )}
+                              </Box>
+                            )}
+                            <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              {table.table_detection?.confidence && (
+                                <Chip 
+                                  label={`Confidence: ${(table.table_detection.confidence * 100).toFixed(1)}%`}
+                                  size="small"
+                                  color={table.table_detection.confidence > 0.7 ? 'success' : 'warning'}
+                                />
+                              )}
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Cell Segmentation Visualization */}
+            <Grid item xs={12} md={6}>
+              <Card 
+                sx={{ 
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: theme.shadows[6],
+                  }
+                }}
+              >
+                <CardHeader
+                  avatar={<CellIcon sx={{ color: 'white' }} />}
+                  title="Ảnh cell đã segment"
+                  subheader="Từng cell được cắt ra và đánh số"
+                  sx={{ 
+                    bgcolor: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+                    background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+                    color: 'white',
+                    '& .MuiCardHeader-subheader': {
+                      color: 'white',
+                      opacity: 0.9
+                    }
+                  }}
+                />
+                <CardContent sx={{ p: 2 }}>
+                  <Grid container spacing={2}>
+                    {extractedData.map((table, index) => (
+                      <Grid item xs={12} sm={6} md={12} lg={6} key={index}>
+                        <Card variant="outlined" sx={{ borderRadius: 2 }}>
+                          <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+                              Trang {table.page} - Bảng {table.table}
+                            </Typography>
+                            {table.visualizations?.cell_segmentation_image ? (
+                              <Box 
+                                component="img"
+                                src={table.visualizations.cell_segmentation_image}
+                                alt={`Cell segmentation page ${table.page} table ${table.table}`}
+                                onClick={() => handleImageClick(
+                                  table.visualizations.cell_segmentation_image,
+                                  `Cell Segmentation - Trang ${table.page}, Bảng ${table.table}`
+                                )}
+                                onError={(e) => {
+                                  console.error('Failed to load cell segmentation image:', e);
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'flex';
+                                }}
+                                sx={{
+                                  width: '100%',
+                                  height: 'auto',
+                                  maxHeight: 200,
+                                  objectFit: 'contain',
+                                  borderRadius: 1,
+                                  border: '1px solid',
+                                  borderColor: 'grey.300',
+                                  cursor: 'pointer',
+                                  transition: 'transform 0.2s ease',
+                                  '&:hover': {
+                                    transform: 'scale(1.02)',
+                                    boxShadow: theme.shadows[4]
+                                  }
+                                }}
+                              />
+                            ) : null}
+                            {(!table.visualizations?.cell_segmentation_image || table.visualizations?.error) && (
+                              <Box 
+                                sx={{
+                                  width: '100%',
+                                  height: 200,
+                                  bgcolor: 'grey.100',
+                                  borderRadius: 1,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  border: '1px solid',
+                                  borderColor: 'grey.300',
+                                  gap: 1
+                                }}
+                              >
+                                <Typography variant="body2" color="text.secondary">
+                                  {table.visualizations?.error ? 'Lỗi tạo ảnh cell visualization' : 'Không có ảnh cell visualization'}
+                                </Typography>
+                                {table.visualizations?.error && (
+                                  <Typography variant="caption" color="error" sx={{ textAlign: 'center', px: 1 }}>
+                                    {table.visualizations.error}
+                                  </Typography>
+                                )}
+                              </Box>
+                            )}
+                            <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              <Chip 
+                                label={`${table.cell_detection?.cells_detected || 0} cells`}
+                                size="small"
+                                color="info"
+                              />
+                              {table.cell_detection?.cells_confidence && table.cell_detection.cells_confidence.length > 0 && (
+                                <Chip 
+                                  label={`Avg: ${(table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length * 100).toFixed(1)}%`}
+                                  size="small"
+                                  color={
+                                    (table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length) > 0.7 ? 'success' : 
+                                    (table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length) > 0.5 ? 'warning' : 'error'
+                                  }
+                                />
+                              )}
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        )}
+
         {/* Three Vertical Cards */}
         <Grid container spacing={3}>
           {/* Table Regions Card */}
@@ -913,6 +1043,60 @@ const PreviewPage = () => {
             />
           </MenuItem>
         </Menu>
+
+        {/* Image Modal */}
+        <Modal
+          open={imageModal.open}
+          onClose={handleImageModalClose}
+          closeAfterTransition
+          BackdropComponent={Backdrop}
+          BackdropProps={{
+            timeout: 500,
+            sx: { backgroundColor: 'rgba(0, 0, 0, 0.8)' }
+          }}
+        >
+          <Fade in={imageModal.open}>
+            <Box
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                maxWidth: '95vw',
+                maxHeight: '95vh',
+                bgcolor: 'background.paper',
+                borderRadius: 2,
+                boxShadow: 24,
+                p: 2,
+                outline: 'none',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
+                  {imageModal.title}
+                </Typography>
+                <IconButton onClick={handleImageModalClose} sx={{ color: 'grey.500' }}>
+                  <ArrowBackIcon />
+                </IconButton>
+              </Box>
+              <Box 
+                component="img"
+                src={imageModal.src}
+                alt={imageModal.title}
+                sx={{
+                  maxWidth: '100%',
+                  maxHeight: '80vh',
+                  objectFit: 'contain',
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'grey.300'
+                }}
+              />
+            </Box>
+          </Fade>
+        </Modal>
       </Box>
     </MainLayout>
   );

@@ -8,6 +8,9 @@ import pandas as pd
 from docx import Document
 import io
 import types, sys, torch.nn as nn
+import base64
+import os
+from pathlib import Path
 
 # -----------------------------------------------------------------------------
 # Workaround for models trained with custom modules
@@ -75,16 +78,8 @@ except Exception as e:
     print(f"Error loading table model: {e}")
     table_model = None
 
-# Model that detects the grid structure – rows and columns – inside a table
-try:
-    structure_model_path = MODEL_DIR / 'best(rowxcolumn).pt'
-    print(f"Loading structure model from: {structure_model_path}")
-    print(f"Model file exists: {structure_model_path.exists()}")
-    structure_model = YOLO(str(structure_model_path))
-    print("Structure model loaded successfully")
-except Exception as e:
-    print(f"Error loading structure model: {e}")
-    structure_model = None
+# Structure model removed - using only table detection and cell segmentation
+structure_model = None
 
 # Model that detects individual cells within a table for text extraction
 try:
@@ -176,21 +171,17 @@ def process_pdf(file_path):
             table_img = img_cv[y1:y2, x1:x2]
             print(f"Cropped table image shape: {table_img.shape}")
 
-            # Detect rows and columns in the table image
-            structure_info = detect_table_structure_with_info(table_img)
-            rows, cols = structure_info['rows'], structure_info['cols']
-
-            # Detect individual cells for better text extraction
+            # Phase 2: Detect individual cells using cell segmentation model
             cell_info = detect_cells_with_info(table_img)
             cells = cell_info['cells']
 
-            # Reconstruct the table from the structure (using both row/col structure and cell detection)
+            # Phase 3: Extract text from detected cells
             if cells and len(cells) > 0:
                 print(f"Using cell-based extraction with {len(cells)} detected cells")
                 table_data = build_table_from_cells(page, [x1, y1, x2, y2], cells, cell_info)
             else:
-                print("Falling back to row/column-based extraction")
-                table_data = build_table_from_structure(page, [x1, y1, x2, y2], rows, cols)
+                print("No cells detected, creating empty table")
+                table_data = []
 
             # Prepare the table data entry
             table_entry = {
@@ -203,32 +194,20 @@ def process_pdf(file_path):
                     "confidence": float(confidence),
                     "bbox": [int(x1), int(y1), int(x2), int(y2)],
                     "model_used": "best(table).pt"
-                },
-                "structure_detection": {
-                    "rows_detected": len(rows),
-                    "cols_detected": len(cols),
-                    "rows_confidence": structure_info['row_confidences'],
-                    "cols_confidence": structure_info['col_confidences'],
-                    "method": "ai_model",
-                    "model_used": "best(rowxcolumn).pt"
                 }
             }
             
-            # Add cell detection info if cells were used
-            if cells and len(cells) > 0:
-                table_entry["cell_detection"] = {
-                    "cells_detected": len(cells),
-                    "cells_confidence": cell_info['confidences'],
-                    "method": "ai_model",
-                    "model_used": "best(cell).pt",
-                    "extraction_method": "cell_based"
-                }
-            else:
-                table_entry["cell_detection"] = {
-                    "cells_detected": 0,
-                    "method": "fallback",
-                    "extraction_method": "structure_based"
-                }
+            # Add cell detection info
+            table_entry["cell_detection"] = {
+                "cells_detected": len(cells) if cells else 0,
+                "cells_confidence": [float(conf) for conf in cell_info['confidences']] if cells and cell_info else [],
+                "method": "ai_model", 
+                "model_used": "best(cell).pt",
+                "extraction_method": "cell_based"
+            }
+            
+            # Always add visualizations
+            table_entry["visualizations"] = save_table_visualization(img_cv, [x1, y1, x2, y2], cells if cells else [], page_num + 1, i + 1)
             
             all_tables_data.append(table_entry)
 
@@ -363,95 +342,14 @@ def detect_table_structure(table_image):
 
 def detect_table_structure_with_info(table_image):
     """
-    Detects rows and columns in a cropped table image and returns detailed info.
+    DEPRECATED: Structure detection removed from 3-phase workflow
     """
-    print(f"Detecting structure in table image of shape: {table_image.shape}")
-    
-    if structure_model is None:
-        print("Structure model not loaded, cannot detect table structure")
-        return {
-            'rows': [], 'cols': [], 
-            'row_confidences': [], 'col_confidences': [],
-            'model': None, 'threshold': 0.3
-        }
-        
-    results = structure_model(table_image)
-    
-    # Debug: Print structure detection results
-    print(f"Structure detection results: {len(results)} result(s)")
-    if len(results) > 0 and results[0].boxes is not None:
-        boxes = results[0].boxes.xyxy.cpu().numpy().astype(int)
-        classes = results[0].boxes.cls.cpu().numpy().astype(int)
-        confidences = results[0].boxes.conf.cpu().numpy()
-        class_names = results[0].names
-        
-        print(f"Class names available: {class_names}")
-        print(f"Found {len(boxes)} structure elements")
-        print(f"Classes: {classes}")
-        print(f"Confidences: {confidences}")
-
-        rows = []
-        cols = []
-        row_confidences = []
-        col_confidences = []
-        
-        # Look for class names containing 'row' and 'column' (case insensitive)
-        row_class_id = -1
-        col_class_id = -1
-        for k, v in class_names.items():
-            v_lower = v.lower()
-            if 'row' in v_lower:
-                row_class_id = k
-                print(f"Found row class: {k} -> {v}")
-            if 'col' in v_lower:  # Also check for 'col' in case it's abbreviated
-                col_class_id = k
-                print(f"Found column class: {k} -> {v}")
-
-        print(f"Row class ID: {row_class_id}, Column class ID: {col_class_id}")
-
-        # Filter by confidence and class
-        confidence_threshold = 0.3  # Lower threshold for structure detection
-        for box, cls, conf in zip(boxes, classes, confidences):
-            if conf >= confidence_threshold:
-                if cls == row_class_id:
-                    rows.append(box)
-                    row_confidences.append(float(conf))
-                    print(f"Added row: {box} (conf: {conf:.3f})")
-                elif cls == col_class_id:
-                    cols.append(box)
-                    col_confidences.append(float(conf))
-                    print(f"Added column: {box} (conf: {conf:.3f})")
-
-        # Sort rows by top coordinate, and columns by left coordinate
-        # Also maintain the confidence order
-        if rows:
-            row_indices = sorted(range(len(rows)), key=lambda i: rows[i][1])
-            rows = [rows[i] for i in row_indices]
-            row_confidences = [row_confidences[i] for i in row_indices]
-        
-        if cols:
-            col_indices = sorted(range(len(cols)), key=lambda i: cols[i][0])
-            cols = [cols[i] for i in col_indices]
-            col_confidences = [col_confidences[i] for i in col_indices]
-        
-        print(f"Final: {len(rows)} rows, {len(cols)} columns")
-        
-        return {
-            'rows': rows,
-            'cols': cols,
-            'row_confidences': row_confidences,
-            'col_confidences': col_confidences,
-            'model': 'best(rowxcolumn).pt',
-            'threshold': confidence_threshold,
-            'class_names': class_names
-        }
-    else:
-        print("No structure detected or no boxes found")
-        return {
-            'rows': [], 'cols': [], 
-            'row_confidences': [], 'col_confidences': [],
-            'model': 'best(rowxcolumn).pt', 'threshold': 0.3
-        }
+    print("Structure detection disabled - using cell-based approach only")
+    return {
+        'rows': [], 'cols': [], 
+        'row_confidences': [], 'col_confidences': [],
+        'model': None, 'threshold': 0.3
+    }
 
 def detect_cells_with_info(table_image):
     """
@@ -562,9 +460,9 @@ def build_table_from_cells(page, table_box, cells, cell_info):
         
         cell_data.append({
             'cell_id': i + 1,
-            'bbox': cell_box.tolist(),
+            'bbox': [int(x) for x in cell_box.tolist()],  # Convert to Python ints
             'text': text,
-            'confidence': confidence,
+            'confidence': float(confidence),  # Convert to Python float
             'extraction_method': 'cell_detection'
         })
     
@@ -604,58 +502,10 @@ def build_table_from_cells(page, table_box, cells, cell_info):
 
 def build_table_from_structure(page, table_box, rows, cols):
     """
-    Extracts text by finding the intersection of row and column boxes.
+    DEPRECATED: Structure-based extraction removed from 3-phase workflow
     """
-    print(f"Building table from {len(rows)} rows and {len(cols)} columns")
-    
-    # If no rows or cols detected, try to extract text from the entire table area
-    if not rows or not cols:
-        print("No structure detected, extracting text from entire table area")
-        table_rect = fitz.Rect(table_box[0], table_box[1], table_box[2], table_box[3])
-        text = page.get_text("text", clip=table_rect, sort=True).strip()
-        print(f"Extracted text from entire table: '{text[:100]}...'")
-        
-        # Return as a single cell if we got text
-        if text:
-            return [[text]]
-        else:
-            return [[""]]
-    
-    table_data = []
-    table_origin_x, table_origin_y = table_box[0], table_box[1]
-
-    for row_idx, row_box in enumerate(rows):
-        row_data = []
-        print(f"Processing row {row_idx}: {row_box}")
-        
-        for col_idx, col_box in enumerate(cols):
-            # Calculate intersection of row and column to define the cell
-            cell_x1 = max(row_box[0], col_box[0])
-            cell_y1 = max(row_box[1], col_box[1])
-            cell_x2 = min(row_box[2], col_box[2])
-            cell_y2 = min(row_box[3], col_box[3])
-            
-            if cell_x1 < cell_x2 and cell_y1 < cell_y2:
-                # The cell coordinates are relative to the table image,
-                # so we need to convert them to page coordinates.
-                cell_rect_on_page = fitz.Rect(
-                    table_origin_x + cell_x1,
-                    table_origin_y + cell_y1,
-                    table_origin_x + cell_x2,
-                    table_origin_y + cell_y2
-                )
-                
-                # Get text from the cell area
-                text = page.get_text("text", clip=cell_rect_on_page, sort=True).strip()
-                print(f"  Cell ({row_idx},{col_idx}): '{text}' from rect {cell_rect_on_page}")
-                row_data.append(text)
-            else:
-                print(f"  Cell ({row_idx},{col_idx}): No intersection")
-                row_data.append("") # No intersection
-        table_data.append(row_data)
-
-    print(f"Final table data: {len(table_data)} rows")
-    return table_data
+    print("Structure-based extraction disabled - should not be called")
+    return []
 
 def extract_text_fallback(page):
     """
@@ -735,4 +585,82 @@ def extract_text_fallback(page):
 #     # Here you might want to structure the data into rows and columns
 #     # For now, we return a flat list of cell texts
 #     return cell_data 
+
+def save_table_visualization(page_image, table_bbox, cells, page_num, table_num):
+    """
+    Create and save visualizations of table detection and cell segmentation.
+    Returns base64 encoded images for frontend display.
+    """
+    print(f"Creating visualization for page {page_num}, table {table_num}")
+    print(f"Table bbox: {table_bbox}")
+    print(f"Number of cells: {len(cells)}")
+    
+    try:
+        x1, y1, x2, y2 = table_bbox
+        
+        # Create table detection visualization
+        table_vis = page_image.copy()
+        cv2.rectangle(table_vis, (x1, y1), (x2, y2), (0, 255, 0), 3)
+        cv2.putText(table_vis, f"Table {table_num}", (x1, y1-10), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        print(f"Created table detection visualization with shape: {table_vis.shape}")
+        
+        # Create cell segmentation visualization  
+        table_img = page_image[y1:y2, x1:x2].copy()
+        cell_vis = table_img.copy()
+        
+        # Draw cell boundaries
+        for i, cell in enumerate(cells):
+            cx1, cy1, cx2, cy2 = cell
+            cv2.rectangle(cell_vis, (cx1, cy1), (cx2, cy2), (255, 0, 0), 2)
+            cv2.putText(cell_vis, f"{i+1}", (cx1+5, cy1+20), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+        print(f"Created cell segmentation visualization with shape: {cell_vis.shape}")
+        
+        # Convert to base64 for JSON response with compression
+        def img_to_base64(img):
+            # Resize image to reduce size if too large
+            height, width = img.shape[:2]
+            max_size = 800  # Maximum width or height
+            if max(height, width) > max_size:
+                scale = max_size / max(height, width)
+                new_width = int(width * scale)
+                new_height = int(height * scale)
+                img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_AREA)
+                print(f"Resized image from {width}x{height} to {new_width}x{new_height}")
+            
+            # Use JPEG compression to reduce file size
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 85]  # 85% quality
+            _, buffer = cv2.imencode('.jpg', img, encode_param)
+            img_base64 = base64.b64encode(buffer).decode('utf-8')
+            return f"data:image/jpeg;base64,{img_base64}"
+        
+        table_detection_b64 = img_to_base64(table_vis)
+        cell_segmentation_b64 = img_to_base64(cell_vis)
+        
+        print(f"Table detection image base64 length: {len(table_detection_b64)}")
+        print(f"Cell segmentation image base64 length: {len(cell_segmentation_b64)}")
+        
+        result = {
+            "table_detection_image": table_detection_b64,
+            "cell_segmentation_image": cell_segmentation_b64,
+            "table_bbox": [int(x) for x in table_bbox],  # Convert numpy int32 to Python int
+            "cells_count": len(cells)
+        }
+        
+        print(f"Successfully created visualization data for page {page_num}, table {table_num}")
+        return result
+        
+    except Exception as e:
+        print(f"Error creating visualization: {e}")
+        import traceback
+        traceback.print_exc()
+        # Return empty visualization data if error occurs
+        return {
+            "table_detection_image": None,
+            "cell_segmentation_image": None,
+            "table_bbox": [int(x) for x in table_bbox] if table_bbox is not None else None,
+            "cells_count": len(cells),
+            "error": str(e)
+        }
 

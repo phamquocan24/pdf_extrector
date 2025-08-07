@@ -45,7 +45,24 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
       headers: {
         ...form.getHeaders(),
       },
+      timeout: 300000, // 5 minutes timeout for large images
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
     });
+
+    // Log the response from Python service for debugging
+    console.log("Python service response:", JSON.stringify(response.data, null, 2));
+    
+    // Check if visualization data exists
+    if (response.data && response.data.data) {
+      response.data.data.forEach((table, index) => {
+        console.log(`Table ${index + 1} visualizations:`, table.visualizations ? 'Present' : 'Missing');
+        if (table.visualizations) {
+          console.log(`  - table_detection_image: ${table.visualizations.table_detection_image ? 'Present' : 'Missing'}`);
+          console.log(`  - cell_segmentation_image: ${table.visualizations.cell_segmentation_image ? 'Present' : 'Missing'}`);
+        }
+      });
+    }
 
     // Send the extracted data back to the client
     res.json(response.data);
