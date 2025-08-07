@@ -60,6 +60,12 @@ const DashboardPage = () => {
       setSnackbar({ open: true, message: 'Vui lòng chọn file PDF!', severity: 'error' });
       return;
     }
+
+    // Check file size (50MB limit)
+    if (file.size > 50 * 1024 * 1024) {
+      setSnackbar({ open: true, message: 'File quá lớn! Tối đa 50MB.', severity: 'error' });
+      return;
+    }
     const tempId = Date.now();
     setFiles([{ id: tempId, name: file.name, size: file.size, status: 'processing', data: null }, ...files]);
 
@@ -75,7 +81,16 @@ const DashboardPage = () => {
     } catch (err) {
       console.error(err);
       setFiles(prev => prev.map(f => f.id === tempId ? { ...f, status: 'error' } : f));
-      setSnackbar({ open: true, message: 'Có lỗi xảy ra khi xử lý file!', severity: 'error' });
+      
+      // Handle specific error messages
+      let errorMessage = 'Có lỗi xảy ra khi xử lý file!';
+      if (err.response?.status === 413) {
+        errorMessage = 'File quá lớn! Tối đa 50MB.';
+      } else if (err.response?.status === 400) {
+        errorMessage = err.response.data.error || 'File không hợp lệ!';
+      }
+      
+      setSnackbar({ open: true, message: errorMessage, severity: 'error' });
     }
   };
 
@@ -164,7 +179,7 @@ const DashboardPage = () => {
             Tải lên file PDF
           </Typography>
           <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-            Kéo thả file vào đây hoặc click để chọn file
+            Kéo thả file PDF vào đây hoặc click để chọn file (Tối đa 50MB)
           </Typography>
         </Paper>
 

@@ -19,8 +19,13 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Setup multer for file uploads
-const upload = multer({ dest: "uploads/" });
+// Setup multer for file uploads with size limit
+const upload = multer({ 
+  dest: "uploads/",
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  }
+});
 
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to the application." });
@@ -29,7 +34,12 @@ app.get("/", (req, res) => {
 // Route to handle file upload and extraction
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   if (!req.file) {
-    return res.status(400).send("No file uploaded.");
+    return res.status(400).json({ error: "No file uploaded." });
+  }
+
+  // Check file type
+  if (req.file.mimetype !== 'application/pdf') {
+    return res.status(400).json({ error: "Only PDF files are allowed." });
   }
 
   const filePath = req.file.path;
@@ -68,7 +78,13 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     res.json(response.data);
   } catch (error) {
     console.error("Error calling Python service:", error.message);
-    res.status(500).send("Error processing file.");
+    
+    // Handle file size limit error
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: "File too large. Maximum size is 50MB." });
+    }
+    
+    res.status(500).json({ error: "Error processing file." });
   } finally {
     // Clean up the uploaded file
     fs.unlinkSync(filePath);

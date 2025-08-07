@@ -290,8 +290,7 @@ const PreviewPage = () => {
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>#</TableCell>
-                <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>Bảng</TableCell>
+
                 <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>Trang</TableCell>
                 <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>Phương thức</TableCell>
                 <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>Rows x Cols</TableCell>
@@ -303,8 +302,7 @@ const PreviewPage = () => {
             <TableBody>
               {allTables.map((table, index) => (
                 <TableRow key={index} hover>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>{table.table || 'N/A'}</TableCell>
+
                   <TableCell>{table.page || 'N/A'}</TableCell>
                   <TableCell>
                     <Chip 
@@ -659,85 +657,107 @@ const PreviewPage = () => {
                   }}
                 />
                 <CardContent sx={{ p: 2 }}>
-                  <Grid container spacing={2}>
-                    {extractedData.map((table, index) => (
-                      <Grid item xs={12} sm={6} md={12} lg={6} key={index}>
-                        <Card variant="outlined" sx={{ borderRadius: 2 }}>
-                          <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-                            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
-                              Trang {table.page} - Bảng {table.table}
-                            </Typography>
-                            {table.visualizations?.table_detection_image ? (
-                              <Box 
-                                component="img"
-                                src={table.visualizations.table_detection_image}
-                                alt={`Table detection page ${table.page} table ${table.table}`}
-                                onClick={() => handleImageClick(
-                                  table.visualizations.table_detection_image,
-                                  `Table Detection - Trang ${table.page}, Bảng ${table.table}`
-                                )}
-                                onError={(e) => {
-                                  console.error('Failed to load table detection image:', e);
-                                  e.target.style.display = 'none';
-                                  e.target.nextSibling.style.display = 'flex';
-                                }}
-                                sx={{
-                                  width: '100%',
-                                  height: 'auto',
-                                  maxHeight: 200,
-                                  objectFit: 'contain',
-                                  borderRadius: 1,
-                                  border: '1px solid',
-                                  borderColor: 'grey.300',
-                                  cursor: 'pointer',
-                                  transition: 'transform 0.2s ease',
-                                  '&:hover': {
-                                    transform: 'scale(1.02)',
-                                    boxShadow: theme.shadows[4]
-                                  }
-                                }}
-                              />
-                            ) : null}
-                            {(!table.visualizations?.table_detection_image || table.visualizations?.error) && (
-                              <Box 
-                                sx={{
-                                  width: '100%',
-                                  height: 200,
-                                  bgcolor: 'grey.100',
-                                  borderRadius: 1,
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  border: '1px solid',
-                                  borderColor: 'grey.300',
-                                  gap: 1
-                                }}
-                              >
-                                <Typography variant="body2" color="text.secondary">
-                                  {table.visualizations?.error ? 'Lỗi tạo ảnh visualization' : 'Không có ảnh visualization'}
-                                </Typography>
-                                {table.visualizations?.error && (
-                                  <Typography variant="caption" color="error" sx={{ textAlign: 'center', px: 1 }}>
-                                    {table.visualizations.error}
+                  <Box
+                    sx={{
+                      maxHeight: 520, // Khoảng 4 ảnh (mỗi ảnh ~120px + margin)
+                      overflowY: 'auto',
+                      overflowX: 'hidden',
+                      '&::-webkit-scrollbar': {
+                        width: '8px',
+                      },
+                      '&::-webkit-scrollbar-track': {
+                        background: '#f1f1f1',
+                        borderRadius: '4px',
+                      },
+                      '&::-webkit-scrollbar-thumb': {
+                        background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
+                        borderRadius: '4px',
+                      },
+                      '&::-webkit-scrollbar-thumb:hover': {
+                        background: 'linear-gradient(135deg, #ee5a6f 0%, #ff6b6b 100%)',
+                      },
+                    }}
+                  >
+                    <Grid container spacing={2}>
+                      {extractedData.map((table, index) => (
+                        <Grid item xs={12} sm={6} md={12} lg={6} key={index}>
+                          <Card variant="outlined" sx={{ borderRadius: 2 }}>
+                            <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+                                Trang {table.page} - Bảng {table.table}
+                              </Typography>
+                              {table.visualizations?.table_detection_image ? (
+                                <Box 
+                                  component="img"
+                                  src={table.visualizations.table_detection_image}
+                                  alt={`Table detection page ${table.page} table ${table.table}`}
+                                  onClick={() => handleImageClick(
+                                    table.visualizations.table_detection_image,
+                                    `Table Detection - Trang ${table.page}, Bảng ${table.table}`
+                                  )}
+                                  onError={(e) => {
+                                    console.error('Failed to load table detection image:', e);
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                  }}
+                                  sx={{
+                                    width: '100%',
+                                    height: 'auto',
+                                    maxHeight: 180,
+                                    objectFit: 'contain',
+                                    borderRadius: 1,
+                                    border: '1px solid',
+                                    borderColor: 'grey.300',
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.2s ease',
+                                    '&:hover': {
+                                      transform: 'scale(1.02)',
+                                      boxShadow: theme.shadows[4]
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              {(!table.visualizations?.table_detection_image || table.visualizations?.error) && (
+                                <Box 
+                                  sx={{
+                                    width: '100%',
+                                    height: 180,
+                                    bgcolor: 'grey.100',
+                                    borderRadius: 1,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    border: '1px solid',
+                                    borderColor: 'grey.300',
+                                    gap: 1
+                                  }}
+                                >
+                                  <Typography variant="body2" color="text.secondary">
+                                    {table.visualizations?.error ? 'Lỗi tạo ảnh visualization' : 'Không có ảnh visualization'}
                                   </Typography>
+                                  {table.visualizations?.error && (
+                                    <Typography variant="caption" color="error" sx={{ textAlign: 'center', px: 1 }}>
+                                      {table.visualizations.error}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              )}
+                              <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                {table.table_detection?.confidence && (
+                                  <Chip 
+                                    label={`Confidence: ${(table.table_detection.confidence * 100).toFixed(1)}%`}
+                                    size="small"
+                                    color={table.table_detection.confidence > 0.7 ? 'success' : 'warning'}
+                                  />
                                 )}
                               </Box>
-                            )}
-                            <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                              {table.table_detection?.confidence && (
-                                <Chip 
-                                  label={`Confidence: ${(table.table_detection.confidence * 100).toFixed(1)}%`}
-                                  size="small"
-                                  color={table.table_detection.confidence > 0.7 ? 'success' : 'warning'}
-                                />
-                              )}
-                            </Box>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    ))}
-                  </Grid>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
                 </CardContent>
               </Card>
             </Grid>
@@ -768,93 +788,115 @@ const PreviewPage = () => {
                   }}
                 />
                 <CardContent sx={{ p: 2 }}>
-                  <Grid container spacing={2}>
-                    {extractedData.map((table, index) => (
-                      <Grid item xs={12} sm={6} md={12} lg={6} key={index}>
-                        <Card variant="outlined" sx={{ borderRadius: 2 }}>
-                          <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-                            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
-                              Trang {table.page} - Bảng {table.table}
-                            </Typography>
-                            {table.visualizations?.cell_segmentation_image ? (
-                              <Box 
-                                component="img"
-                                src={table.visualizations.cell_segmentation_image}
-                                alt={`Cell segmentation page ${table.page} table ${table.table}`}
-                                onClick={() => handleImageClick(
-                                  table.visualizations.cell_segmentation_image,
-                                  `Cell Segmentation - Trang ${table.page}, Bảng ${table.table}`
-                                )}
-                                onError={(e) => {
-                                  console.error('Failed to load cell segmentation image:', e);
-                                  e.target.style.display = 'none';
-                                  e.target.nextSibling.style.display = 'flex';
-                                }}
-                                sx={{
-                                  width: '100%',
-                                  height: 'auto',
-                                  maxHeight: 200,
-                                  objectFit: 'contain',
-                                  borderRadius: 1,
-                                  border: '1px solid',
-                                  borderColor: 'grey.300',
-                                  cursor: 'pointer',
-                                  transition: 'transform 0.2s ease',
-                                  '&:hover': {
-                                    transform: 'scale(1.02)',
-                                    boxShadow: theme.shadows[4]
-                                  }
-                                }}
-                              />
-                            ) : null}
-                            {(!table.visualizations?.cell_segmentation_image || table.visualizations?.error) && (
-                              <Box 
-                                sx={{
-                                  width: '100%',
-                                  height: 200,
-                                  bgcolor: 'grey.100',
-                                  borderRadius: 1,
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  border: '1px solid',
-                                  borderColor: 'grey.300',
-                                  gap: 1
-                                }}
-                              >
-                                <Typography variant="body2" color="text.secondary">
-                                  {table.visualizations?.error ? 'Lỗi tạo ảnh cell visualization' : 'Không có ảnh cell visualization'}
-                                </Typography>
-                                {table.visualizations?.error && (
-                                  <Typography variant="caption" color="error" sx={{ textAlign: 'center', px: 1 }}>
-                                    {table.visualizations.error}
+                  <Box
+                    sx={{
+                      maxHeight: 520, // Khoảng 4 ảnh (mỗi ảnh ~120px + margin)
+                      overflowY: 'auto',
+                      overflowX: 'hidden',
+                      '&::-webkit-scrollbar': {
+                        width: '8px',
+                      },
+                      '&::-webkit-scrollbar-track': {
+                        background: '#f1f1f1',
+                        borderRadius: '4px',
+                      },
+                      '&::-webkit-scrollbar-thumb': {
+                        background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+                        borderRadius: '4px',
+                      },
+                      '&::-webkit-scrollbar-thumb:hover': {
+                        background: 'linear-gradient(135deg, #fed6e3 0%, #a8edea 100%)',
+                      },
+                    }}
+                  >
+                    <Grid container spacing={2}>
+                      {extractedData.map((table, index) => (
+                        <Grid item xs={12} sm={6} md={12} lg={6} key={index}>
+                          <Card variant="outlined" sx={{ borderRadius: 2 }}>
+                            <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+                                Trang {table.page} - Bảng {table.table}
+                              </Typography>
+                              {table.visualizations?.cell_segmentation_image ? (
+                                <Box 
+                                  component="img"
+                                  src={table.visualizations.cell_segmentation_image}
+                                  alt={`Cell segmentation page ${table.page} table ${table.table}`}
+                                  onClick={() => handleImageClick(
+                                    table.visualizations.cell_segmentation_image,
+                                    `Cell Segmentation - Trang ${table.page}, Bảng ${table.table}`
+                                  )}
+                                  onError={(e) => {
+                                    console.error('Failed to load cell segmentation image:', e);
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                  }}
+                                  sx={{
+                                    width: '100%',
+                                    height: 'auto',
+                                    maxHeight: 180,
+                                    objectFit: 'contain',
+                                    borderRadius: 1,
+                                    border: '1px solid',
+                                    borderColor: 'grey.300',
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.2s ease',
+                                    '&:hover': {
+                                      transform: 'scale(1.02)',
+                                      boxShadow: theme.shadows[4]
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              {(!table.visualizations?.cell_segmentation_image || table.visualizations?.error) && (
+                                <Box 
+                                  sx={{
+                                    width: '100%',
+                                    height: 180,
+                                    bgcolor: 'grey.100',
+                                    borderRadius: 1,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    border: '1px solid',
+                                    borderColor: 'grey.300',
+                                    gap: 1
+                                  }}
+                                >
+                                  <Typography variant="body2" color="text.secondary">
+                                    {table.visualizations?.error ? 'Lỗi tạo ảnh cell visualization' : 'Không có ảnh cell visualization'}
                                   </Typography>
+                                  {table.visualizations?.error && (
+                                    <Typography variant="caption" color="error" sx={{ textAlign: 'center', px: 1 }}>
+                                      {table.visualizations.error}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              )}
+                              <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                <Chip 
+                                  label={`${table.cell_detection?.cells_detected || 0} cells`}
+                                  size="small"
+                                  color="info"
+                                />
+                                {table.cell_detection?.cells_confidence && table.cell_detection.cells_confidence.length > 0 && (
+                                  <Chip 
+                                    label={`Avg: ${(table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length * 100).toFixed(1)}%`}
+                                    size="small"
+                                    color={
+                                      (table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length) > 0.7 ? 'success' : 
+                                      (table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length) > 0.5 ? 'warning' : 'error'
+                                    }
+                                  />
                                 )}
                               </Box>
-                            )}
-                            <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                              <Chip 
-                                label={`${table.cell_detection?.cells_detected || 0} cells`}
-                                size="small"
-                                color="info"
-                              />
-                              {table.cell_detection?.cells_confidence && table.cell_detection.cells_confidence.length > 0 && (
-                                <Chip 
-                                  label={`Avg: ${(table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length * 100).toFixed(1)}%`}
-                                  size="small"
-                                  color={
-                                    (table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length) > 0.7 ? 'success' : 
-                                    (table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length) > 0.5 ? 'warning' : 'error'
-                                  }
-                                />
-                              )}
-                            </Box>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    ))}
-                  </Grid>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
                 </CardContent>
               </Card>
             </Grid>
