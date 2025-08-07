@@ -319,7 +319,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Team
 
-- **Developer**: [Your Name]
+- **Developer**: "Xay Dung He Thong Tu Dong Trich Xuat Bang Du Lieu Tai Chinh"
 - **Institution**: CMC University
 - **Course**: Computer Vision - Final Term Project
 
@@ -329,7 +329,7 @@ Nếu gặp vấn đề, vui lòng:
 1. Kiểm tra [START_GUIDE.md](START_GUIDE.md)
 2. Xem phần Troubleshooting ở trên
 3. Tạo issue trên GitHub
-4. Liên hệ qua email: [your-email@example.com]
+4. Liên hệ qua email: [bit220006@st.cmcu.edu.vn]
 
 ---
 
