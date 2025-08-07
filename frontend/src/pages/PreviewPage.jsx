@@ -120,7 +120,7 @@ const PreviewPage = () => {
       return;
     }
     
-    const headers = ['STT', 'Trang', 'Bảng', 'Phương thức', 'Rows', 'Cols', 'Table Confidence', 'Rows Confidence', 'Cols Confidence', 'Structure Confidence', 'Quality Score', 'Min Confidence', 'Max Confidence', 'Cell Detection', 'Cells Count', 'Cells Confidence'];
+    const headers = ['STT', 'Trang', 'Bảng', 'Phương thức', 'Rows', 'Cols', 'Cell Detection', 'Cells Count'];
     const csvContent = [
       headers.join(','),
       ...extractedData.map((table, index) => [
@@ -130,17 +130,8 @@ const PreviewPage = () => {
         table.method || 'N/A',
         table.data?.length || 0,
         table.data?.[0]?.length || 0,
-        table.table_detection?.confidence ? (table.table_detection.confidence * 100).toFixed(1) + '%' : 'N/A',
-        'N/A', // Structure detection removed
-        'N/A', // Structure detection removed  
-        'N/A', // Structure detection removed
-        table.table_detection?.confidence ? (table.table_detection.confidence * 100).toFixed(1) + '%' : 'N/A',
-        'N/A', // Structure detection removed
-        'N/A', // Structure detection removed
         table.cell_detection?.method || 'structure_based',
-        table.cell_detection?.cells_detected || 0,
-        table.cell_detection?.cells_confidence ? 
-          (table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length * 100).toFixed(1) + '%' : 'N/A'
+        table.cell_detection?.cells_detected || 0
       ].join(','))
     ].join('\n');
     
@@ -158,7 +149,7 @@ const PreviewPage = () => {
       .map((table, index) => 
         `Bảng ${table.table} - Trang ${table.page} (${table.method}):\n` +
         `Rows: ${table.data?.length || 0}, Cols: ${table.data?.[0]?.length || 0}\n` +
-        `Confidence: ${table.table_detection?.confidence ? (table.table_detection.confidence * 100).toFixed(1) + '%' : 'N/A'}\n\n` +
+        `Cells: ${table.cell_detection?.cells_detected || 0}\n\n` +
         (table.data && table.data.length > 0 ? 
           table.data.map((row, rowIndex) => `Row ${rowIndex + 1}: [${row.join(', ')}]`).join('\n') :
           'Không có dữ liệu') + '\n'
@@ -196,14 +187,7 @@ const PreviewPage = () => {
             <Typography variant="subtitle2">
               Bảng {table.table} - Trang {table.page}
             </Typography>
-            {table.table_detection && (
-              <Chip 
-                label={`${(table.table_detection.confidence * 100).toFixed(1)}%`}
-                size="small"
-                color={table.table_detection.confidence > 0.7 ? "success" : "warning"}
-                sx={{ ml: 1 }}
-              />
-            )}
+
           </Box>
         </AccordionSummary>
         <AccordionDetails>
@@ -215,11 +199,6 @@ const PreviewPage = () => {
             {table.table_detection && (
               <Box sx={{ mb: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 1 }}>
-                  <Chip 
-                    label={`Confidence: ${(table.table_detection.confidence * 100).toFixed(1)}%`} 
-                    size="small" 
-                    color={table.table_detection.confidence > 0.7 ? "success" : "warning"}
-                  />
                   <Chip 
                     label={`Model: ${table.table_detection.model_used || 'N/A'}`} 
                     size="small" 
@@ -294,7 +273,7 @@ const PreviewPage = () => {
                 <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>Trang</TableCell>
                 <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>Phương thức</TableCell>
                 <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>Rows x Cols</TableCell>
-                <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>Table Confidence</TableCell>
+
 
                 <TableCell sx={{ fontWeight: 600, bgcolor: 'grey.50' }}>Cell Detection</TableCell>
               </TableRow>
@@ -314,33 +293,14 @@ const PreviewPage = () => {
                   <TableCell>
                     {table.data?.length || 0} x {table.data?.[0]?.length || 0}
                   </TableCell>
-                  <TableCell>
-                    {table.table_detection?.confidence ? (
-                      <Chip 
-                        label={`${(table.table_detection.confidence * 100).toFixed(1)}%`}
-                        size="small"
-                        color={table.table_detection.confidence > 0.7 ? 'success' : table.table_detection.confidence > 0.5 ? 'warning' : 'error'}
-                        sx={{ 
-                          fontWeight: 'bold',
-                          '& .MuiChip-label': {
-                            fontSize: '0.75rem'
-                          }
-                        }}
-                      />
-                    ) : (
-                      <Chip label="N/A" size="small" variant="outlined" />
-                    )}
-                  </TableCell>
+
 
                   <TableCell>
                     {table.cell_detection && table.cell_detection.cells_detected > 0 ? (
                       <Chip 
-                        label={`${table.cell_detection.cells_detected} cells (${(table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length * 100).toFixed(1)}%)`}
+                        label={`${table.cell_detection.cells_detected} cells`}
                         size="small"
-                        color={
-                          (table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length) > 0.7 ? 'success' : 
-                          (table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length) > 0.5 ? 'warning' : 'error'
-                        }
+                        color="info"
                         sx={{ fontSize: '0.7rem', height: '20px' }}
                       />
                     ) : (
@@ -432,20 +392,17 @@ const PreviewPage = () => {
               />
               {table.table_detection && (
                 <Chip 
-                  label={`Table: ${(table.table_detection.confidence * 100).toFixed(1)}%`} 
+                  label="Table Detection" 
                   size="small" 
-                  color={table.table_detection.confidence > 0.7 ? 'success' : table.table_detection.confidence > 0.5 ? 'warning' : 'error'}
+                  color="success"
                 />
               )}
 
               {table.cell_detection && table.cell_detection.cells_detected > 0 && (
                 <Chip 
-                  label={`Cells: ${table.cell_detection.cells_detected} (${(table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length * 100).toFixed(1)}%)`} 
+                  label={`${table.cell_detection.cells_detected} Cells`} 
                   size="small" 
-                  color={
-                    (table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length) > 0.7 ? 'success' : 
-                    (table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length) > 0.5 ? 'warning' : 'error'
-                  }
+                  color="info"
                   variant="outlined"
                 />
               )}
@@ -503,16 +460,7 @@ const PreviewPage = () => {
                 • {extractedData?.length || 0} bảng • {extractedData?.reduce((sum, table) => sum + (table.data?.length || 0), 0) || 0} rows • AI Detection: {extractedData?.filter(t => t.method === 'ai_model').length || 0}/{extractedData?.length || 0}
                 {extractedData?.length > 0 && (
                   <>
-                    {' • Avg Confidence: '}
-                    <span style={{ 
-                      color: extractedData.filter(t => t.table_detection?.confidence).reduce((avg, t) => avg + (t.table_detection.confidence * 100), 0) / extractedData.filter(t => t.table_detection?.confidence).length > 70 ? '#4caf50' : '#ff9800',
-                      fontWeight: 'bold'
-                    }}>
-                      {extractedData.filter(t => t.table_detection?.confidence).length > 0 
-                        ? (extractedData.filter(t => t.table_detection?.confidence).reduce((avg, t) => avg + (t.table_detection.confidence * 100), 0) / extractedData.filter(t => t.table_detection?.confidence).length).toFixed(1)
-                        : '0'
-                      }%
-                    </span>
+
                   </>
                 )}
               </Typography>
@@ -539,94 +487,227 @@ const PreviewPage = () => {
           </Box>
         </Box>
 
-        {/* JSON Display - Horizontal Card */}
-        <Card 
-          sx={{ 
-            mb: 3,
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: theme.shadows[6],
-            }
-          }}
-        >
-          <CardHeader
-            avatar={<CodeIcon color="primary" />}
-            title="Dữ liệu JSON đầy đủ"
-            subheader="Dữ liệu trích xuất hoàn chỉnh từ PDF"
-            action={
-              <Tooltip title="Sao chép JSON">
-                <IconButton 
-                  onClick={() => {
-                    navigator.clipboard.writeText(JSON.stringify(extractedData, null, 2));
-                  }}
-                  sx={{
-                    '&:hover': {
-                      bgcolor: 'primary.light',
-                      color: 'white',
-                    }
-                  }}
-                >
-                  <ContentCopyIcon />
-                </IconButton>
-              </Tooltip>
-            }
-            sx={{ 
-              bgcolor: 'grey.100',
-              '& .MuiCardHeader-title': {
-                fontWeight: 600
-              }
-            }}
-          />
-          <CardContent>
-            <Paper
-              sx={{
-                p: 2,
-                bgcolor: '#1e1e1e',
-                border: '1px solid',
-                borderColor: 'grey.300',
-                maxHeight: 300,
-                overflow: 'auto',
-                borderRadius: 2,
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                  height: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: '#2a2a2a',
-                  borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: '#555',
-                  borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-thumb:hover': {
-                  background: '#777',
-                },
+        {/* JSON and CSV Display Cards */}
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          {/* JSON Display Card */}
+          <Grid item xs={12} md={6}>
+            <Card 
+              sx={{ 
+                height: '100%',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: theme.shadows[6],
+                }
               }}
             >
-              <Typography
-                component="pre"
-                variant="body2"
-                sx={{
-                  fontFamily: '"Consolas", "Monaco", "Courier New", monospace',
-                  fontSize: '0.75rem',
-                  lineHeight: 1.4,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  color: '#f8f8f2',
-                  '& .string': { color: '#e6db74' },
-                  '& .number': { color: '#ae81ff' },
-                  '& .boolean': { color: '#66d9ef' },
-                  '& .null': { color: '#66d9ef' },
-                  '& .key': { color: '#f92672' },
+              <CardHeader
+                avatar={<CodeIcon color="primary" />}
+                title="Dữ liệu JSON"
+                subheader="Dữ liệu trích xuất định dạng JSON"
+                action={
+                  <Tooltip title="Sao chép JSON">
+                    <IconButton 
+                      onClick={() => {
+                        navigator.clipboard.writeText(JSON.stringify(extractedData, null, 2));
+                      }}
+                      sx={{
+                        '&:hover': {
+                          bgcolor: 'primary.light',
+                          color: 'white',
+                        }
+                      }}
+                    >
+                      <ContentCopyIcon />
+                    </IconButton>
+                  </Tooltip>
+                }
+                sx={{ 
+                  bgcolor: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                  background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                  color: 'white',
+                  '& .MuiCardHeader-title': {
+                    fontWeight: 600,
+                    color: 'white'
+                  },
+                  '& .MuiCardHeader-subheader': {
+                    color: 'rgba(255, 255, 255, 0.8)'
+                  }
                 }}
-              >
-                {JSON.stringify(extractedData, null, 2)}
-              </Typography>
-            </Paper>
-          </CardContent>
-        </Card>
+              />
+              <CardContent>
+                <Paper
+                  sx={{
+                    p: 2,
+                    bgcolor: '#1e1e1e',
+                    border: '1px solid',
+                    borderColor: 'grey.300',
+                    maxHeight: 300,
+                    overflow: 'auto',
+                    borderRadius: 2,
+                    '&::-webkit-scrollbar': {
+                      width: '8px',
+                      height: '8px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      background: '#2a2a2a',
+                      borderRadius: '4px',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      background: '#555',
+                      borderRadius: '4px',
+                    },
+                    '&::-webkit-scrollbar-thumb:hover': {
+                      background: '#777',
+                    },
+                  }}
+                >
+                  <Typography
+                    component="pre"
+                    variant="body2"
+                    sx={{
+                      fontFamily: '"Consolas", "Monaco", "Courier New", monospace',
+                      fontSize: '0.75rem',
+                      lineHeight: 1.4,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      color: '#f8f8f2',
+                      '& .string': { color: '#e6db74' },
+                      '& .number': { color: '#ae81ff' },
+                      '& .boolean': { color: '#66d9ef' },
+                      '& .null': { color: '#66d9ef' },
+                      '& .key': { color: '#f92672' },
+                    }}
+                  >
+                    {JSON.stringify(extractedData, null, 2)}
+                  </Typography>
+                </Paper>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* CSV Display Card */}
+          <Grid item xs={12} md={6}>
+            <Card 
+              sx={{ 
+                height: '100%',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: theme.shadows[6],
+                }
+              }}
+            >
+              <CardHeader
+                avatar={<TableViewIcon color="secondary" />}
+                title="Dữ liệu CSV"
+                subheader="Dữ liệu trích xuất định dạng CSV"
+                action={
+                  <Tooltip title="Sao chép CSV">
+                    <IconButton 
+                      onClick={() => {
+                        const headers = ['STT', 'Trang', 'Bảng', 'Phương thức', 'Rows', 'Cols', 'Cell Detection', 'Cells Count'];
+                        const csvContent = [
+                          headers.join(','),
+                          ...extractedData.map((table, index) => [
+                            index + 1,
+                            table.page || 'N/A',
+                            table.table || 'N/A',
+                            table.method || 'N/A',
+                            table.data?.length || 0,
+                            table.data?.[0]?.length || 0,
+                            table.cell_detection?.method || 'structure_based',
+                            table.cell_detection?.cells_detected || 0
+                          ].join(','))
+                        ].join('\n');
+                        navigator.clipboard.writeText(csvContent);
+                      }}
+                      sx={{
+                        '&:hover': {
+                          bgcolor: 'secondary.light',
+                          color: 'white',
+                        }
+                      }}
+                    >
+                      <ContentCopyIcon />
+                    </IconButton>
+                  </Tooltip>
+                }
+                sx={{ 
+                  bgcolor: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                  background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                  color: 'white',
+                  '& .MuiCardHeader-title': {
+                    fontWeight: 600,
+                    color: 'white'
+                  },
+                  '& .MuiCardHeader-subheader': {
+                    color: 'rgba(255, 255, 255, 0.9)'
+                  }
+                }}
+              />
+              <CardContent>
+                <Paper
+                  sx={{
+                    p: 2,
+                    bgcolor: '#f8f9fa',
+                    border: '1px solid',
+                    borderColor: 'grey.300',
+                    maxHeight: 300,
+                    overflow: 'auto',
+                    borderRadius: 2,
+                    '&::-webkit-scrollbar': {
+                      width: '8px',
+                      height: '8px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      background: '#e0e0e0',
+                      borderRadius: '4px',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      background: '#bbb',
+                      borderRadius: '4px',
+                    },
+                    '&::-webkit-scrollbar-thumb:hover': {
+                      background: '#999',
+                    },
+                  }}
+                >
+                  <Typography
+                    component="pre"
+                    variant="body2"
+                    sx={{
+                      fontFamily: '"Consolas", "Monaco", "Courier New", monospace',
+                      fontSize: '0.75rem',
+                      lineHeight: 1.4,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      color: '#333',
+                    }}
+                  >
+                    {(() => {
+                      const headers = ['STT', 'Trang', 'Bảng', 'Phương thức', 'Rows', 'Cols', 'Cell Detection', 'Cells Count'];
+                      const csvContent = [
+                        headers.join(','),
+                        ...extractedData.map((table, index) => [
+                          index + 1,
+                          table.page || 'N/A',
+                          table.table || 'N/A',
+                          table.method || 'N/A',
+                          table.data?.length || 0,
+                          table.data?.[0]?.length || 0,
+                          table.cell_detection?.method || 'structure_based',
+                          table.cell_detection?.cells_detected || 0
+                        ].join(','))
+                      ].join('\n');
+                      return csvContent;
+                    })()}
+                  </Typography>
+                </Paper>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
 
         {/* Table Detection and Cell Segmentation Visualizations */}
         {extractedData && extractedData.length > 0 && (
@@ -744,13 +825,7 @@ const PreviewPage = () => {
                                 </Box>
                               )}
                               <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                {table.table_detection?.confidence && (
-                                  <Chip 
-                                    label={`Confidence: ${(table.table_detection.confidence * 100).toFixed(1)}%`}
-                                    size="small"
-                                    color={table.table_detection.confidence > 0.7 ? 'success' : 'warning'}
-                                  />
-                                )}
+
                               </Box>
                             </CardContent>
                           </Card>
@@ -778,12 +853,18 @@ const PreviewPage = () => {
                   title="Ảnh cell đã segment"
                   subheader="Từng cell được cắt ra và đánh số"
                   sx={{ 
-                    bgcolor: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-                    background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+                    bgcolor: 'linear-gradient(135deg, #a8cc8c 0%, #7aa3c1 100%)',
+                    background: 'linear-gradient(135deg, #a8cc8c 0%, #7aa3c1 100%)',
                     color: 'white',
+                    '& .MuiCardHeader-title': {
+                      fontSize: '1.1rem',
+                      fontWeight: 600,
+                      color: 'white'
+                    },
                     '& .MuiCardHeader-subheader': {
                       color: 'white',
-                      opacity: 0.9
+                      opacity: 0.95,
+                      fontWeight: 500
                     }
                   }}
                 />
@@ -801,11 +882,11 @@ const PreviewPage = () => {
                         borderRadius: '4px',
                       },
                       '&::-webkit-scrollbar-thumb': {
-                        background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+                        background: 'linear-gradient(135deg, #a8cc8c 0%, #7aa3c1 100%)',
                         borderRadius: '4px',
                       },
                       '&::-webkit-scrollbar-thumb:hover': {
-                        background: 'linear-gradient(135deg, #fed6e3 0%, #a8edea 100%)',
+                        background: 'linear-gradient(135deg, #96ba7a 0%, #6891af 100%)',
                       },
                     }}
                   >
@@ -880,16 +961,7 @@ const PreviewPage = () => {
                                   size="small"
                                   color="info"
                                 />
-                                {table.cell_detection?.cells_confidence && table.cell_detection.cells_confidence.length > 0 && (
-                                  <Chip 
-                                    label={`Avg: ${(table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length * 100).toFixed(1)}%`}
-                                    size="small"
-                                    color={
-                                      (table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length) > 0.7 ? 'success' : 
-                                      (table.cell_detection.cells_confidence.reduce((a, b) => a + b, 0) / table.cell_detection.cells_confidence.length) > 0.5 ? 'warning' : 'error'
-                                    }
-                                  />
-                                )}
+
                               </Box>
                             </CardContent>
                           </Card>

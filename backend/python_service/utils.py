@@ -231,11 +231,8 @@ def detect_tables(image):
         print(f"Found {len(boxes)} table(s) with confidences: {confidences}")
         print(f"Table boxes: {boxes}")
         
-        # Filter by confidence threshold (adjust as needed)
-        confidence_threshold = 0.5
-        valid_indices = confidences >= confidence_threshold
-        boxes = boxes[valid_indices]
-        print(f"After filtering (conf >= {confidence_threshold}): {len(boxes)} table(s)")
+        # No confidence filtering - accept all detections
+        print(f"Accepting all {len(boxes)} table detection(s) without threshold filtering")
         
         return boxes
     else:
@@ -260,18 +257,14 @@ def detect_tables_with_info(image):
         print(f"Found {len(boxes)} table(s) with confidences: {confidences}")
         print(f"Table boxes: {boxes}")
         
-        # Filter by confidence threshold (adjust as needed)
-        confidence_threshold = 0.5
-        valid_indices = confidences >= confidence_threshold
-        filtered_boxes = boxes[valid_indices]
-        filtered_confidences = confidences[valid_indices]
-        print(f"After filtering (conf >= {confidence_threshold}): {len(filtered_boxes)} table(s)")
+        # No confidence filtering - accept all detections
+        print(f"Accepting all {len(boxes)} table detection(s) without threshold filtering")
         
         return {
-            'boxes': filtered_boxes,
-            'confidences': filtered_confidences,
+            'boxes': boxes,
+            'confidences': confidences,
             'model': 'best(table).pt',
-            'threshold': confidence_threshold
+            'threshold': 0.0  # No threshold applied
         }
     else:
         print("No tables detected or no boxes found")
@@ -319,10 +312,8 @@ def detect_table_structure(table_image):
 
         print(f"Row class ID: {row_class_id}, Column class ID: {col_class_id}")
 
-        # Filter by confidence and class
-        confidence_threshold = 0.3  # Lower threshold for structure detection
+        # No confidence filtering - accept all structure detections
         for box, cls, conf in zip(boxes, classes, confidences):
-            if conf >= confidence_threshold:
                 if cls == row_class_id:
                     rows.append(box)
                     print(f"Added row: {box} (conf: {conf:.3f})")
@@ -348,7 +339,7 @@ def detect_table_structure_with_info(table_image):
     return {
         'rows': [], 'cols': [], 
         'row_confidences': [], 'col_confidences': [],
-        'model': None, 'threshold': 0.3
+        'model': None, 'threshold': 0.0
     }
 
 def detect_cells_with_info(table_image):
@@ -362,7 +353,7 @@ def detect_cells_with_info(table_image):
         print("Cell model not loaded, cannot detect cells")
         return {
             'cells': [], 'confidences': [], 
-            'model': None, 'threshold': 0.3
+            'model': None, 'threshold': 0.0
         }
         
     results = cell_model(table_image)
@@ -381,13 +372,11 @@ def detect_cells_with_info(table_image):
         cells = []
         cell_confidences = []
         
-        # Filter by confidence threshold
-        confidence_threshold = 0.3  # Threshold for cell detection
+        # No confidence filtering - accept all cell detections
         for box, conf in zip(boxes, confidences):
-            if conf >= confidence_threshold:
-                cells.append(box)
-                cell_confidences.append(float(conf))
-                print(f"Added cell: {box} (conf: {conf:.3f})")
+            cells.append(box)
+            cell_confidences.append(float(conf))
+            print(f"Added cell: {box} (conf: {conf:.3f})")
 
         # Sort cells by position (top to bottom, left to right)
         if cells:
@@ -401,14 +390,14 @@ def detect_cells_with_info(table_image):
             'cells': cells,
             'confidences': cell_confidences,
             'model': 'best(cell).pt',
-            'threshold': confidence_threshold,
+            'threshold': 0.0,  # No threshold applied
             'class_names': class_names
         }
     else:
         print("No cells detected or no boxes found")
         return {
             'cells': [], 'confidences': [], 
-            'model': 'best(cell).pt', 'threshold': 0.3
+            'model': 'best(cell).pt', 'threshold': 0.0
         }
 
 def extract_text_from_cell_region(page, table_box, cell_box):
