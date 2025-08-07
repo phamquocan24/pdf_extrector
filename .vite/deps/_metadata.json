@@ -1,0 +1,112 @@
+{
+  "hash": "203469d5",
+  "configHash": "5e5904b0",
+  "lockfileHash": "e1445b60",
+  "browserHash": "0fdbdfa3",
+  "optimized": {
+    "react": {
+      "src": "../../frontend/node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "479b515f",
+      "needsInterop": true
+    },
+    "react-dom": {
+      "src": "../../frontend/node_modules/react-dom/index.js",
+      "file": "react-dom.js",
+      "fileHash": "5edc031b",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../frontend/node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "202da8f7",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../frontend/node_modules/react-router-dom/dist/index.js",
+      "file": "react-router-dom.js",
+      "fileHash": "d9e8dd46",
+      "needsInterop": false
+    },
+    "@mui/material": {
+      "src": "../../frontend/node_modules/@mui/material/index.js",
+      "file": "@mui_material.js",
+      "fileHash": "05fd4e64",
+      "needsInterop": false
+    },
+    "@mui/material/styles": {
+      "src": "../../frontend/node_modules/@mui/material/styles/index.js",
+      "file": "@mui_material_styles.js",
+      "fileHash": "9293999a",
+      "needsInterop": false
+    },
+    "@mui/icons-material": {
+      "src": "../../frontend/node_modules/@mui/icons-material/esm/index.js",
+      "file": "@mui_icons-material.js",
+      "fileHash": "20d6338d",
+      "needsInterop": false
+    },
+    "formik": {
+      "src": "../../frontend/node_modules/formik/dist/formik.esm.js",
+      "file": "formik.js",
+      "fileHash": "80a3187e",
+      "needsInterop": false
+    },
+    "yup": {
+      "src": "../../frontend/node_modules/yup/index.esm.js",
+      "file": "yup.js",
+      "fileHash": "70169e6a",
+      "needsInterop": false
+    },
+    "react/jsx-dev-runtime": {
+      "src": "../../frontend/node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "596df11d",
+      "needsInterop": true
+    },
+    "react/jsx-runtime": {
+      "src": "../../frontend/node_modules/react/jsx-runtime.js",
+      "file": "react_jsx-runtime.js",
+      "fileHash": "81293d4c",
+      "needsInterop": true
+    },
+    "@react-oauth/google": {
+      "src": "../../frontend/node_modules/@react-oauth/google/dist/index.esm.js",
+      "file": "@react-oauth_google.js",
+      "fileHash": "c6876f88",
+      "needsInterop": false
+    },
+    "axios": {
+      "src": "../../node_modules/axios/index.js",
+      "file": "axios.js",
+      "fileHash": "8d706a0e",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-RYP2YOMH": {
+      "file": "chunk-RYP2YOMH.js"
+    },
+    "chunk-3IIGOWXU": {
+      "file": "chunk-3IIGOWXU.js"
+    },
+    "chunk-2VKCND7Q": {
+      "file": "chunk-2VKCND7Q.js"
+    },
+    "chunk-NY7V7DQA": {
+      "file": "chunk-NY7V7DQA.js"
+    },
+    "chunk-HDEV23GC": {
+      "file": "chunk-HDEV23GC.js"
+    },
+    "chunk-Z3QP6Z2Y": {
+      "file": "chunk-Z3QP6Z2Y.js"
+    },
+    "chunk-PJLEM7EO": {
+      "file": "chunk-PJLEM7EO.js"
+    },
+    "chunk-V4OQ3NZ2": {
+      "file": "chunk-V4OQ3NZ2.js"
+    }
+  }
+}

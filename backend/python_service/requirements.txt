@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+torch
+torchvision
+PyMuPDF
+opencv-python-headless
+numpy==1.26.4
+pandas
+python-docx
+ultralytics
+python-multipart
+scipy
+openpyxl 
