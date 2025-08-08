@@ -4,6 +4,7 @@ import uvicorn
 import os
 import utils
 import traceback
+from advanced_ocr_pipeline import process_table_with_advanced_ocr
 
 app = FastAPI()
 

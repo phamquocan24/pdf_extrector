@@ -5,11 +5,15 @@ torchvision
 PyMuPDF
 opencv-python-headless
 numpy==1.26.4
-pandas
+pandas==2.0.3
 python-docx
 ultralytics
 python-multipart
 scipy
 openpyxl
 pytesseract
-Pillow 
+Pillow==9.5.0
+easyocr==1.7.0
+paddlepaddle==2.6.1
+paddleocr==2.7.3
+matplotlib==3.7.2 

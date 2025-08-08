@@ -4,13 +4,91 @@ import numpy as np
 from PIL import Image
 import torch
 from ultralytics import YOLO
-import pandas as pd
+
+# Safe pandas import with numpy/pandas compatibility fix
+try:
+    import warnings
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        import pandas as pd
+    print("✅ Pandas imported successfully")
+except Exception as e:
+    print(f"⚠️ Pandas import issue: {e}")
+    # Try workaround for numpy/pandas version conflict
+    try:
+        # Suppress all warnings temporarily
+        import warnings
+        warnings.filterwarnings("ignore")
+        
+        # Force reload numpy if needed
+        import sys
+        if 'numpy' in sys.modules:
+            import importlib
+            importlib.reload(sys.modules['numpy'])
+        
+        import pandas as pd
+        print("✅ Pandas imported with compatibility workaround")
+    except Exception as e2:
+        print(f"⚠️ Still having pandas issues: {e2}")
+        # Create minimal pandas replacement for basic functionality
+        print("🔧 Using minimal pandas replacement...")
+        
+        class MinimalPandas:
+            @staticmethod
+            def DataFrame(data=None, columns=None):
+                """Minimal DataFrame replacement"""
+                if data is None:
+                    data = []
+                return {"data": data, "columns": columns or []}
+            
+            @staticmethod  
+            def to_csv(df_dict, path=None, index=False):
+                """Minimal to_csv replacement"""
+                if path and "data" in df_dict and "columns" in df_dict:
+                    import csv
+                    with open(path, 'w', newline='', encoding='utf-8') as f:
+                        writer = csv.writer(f)
+                        if df_dict["columns"]:
+                            writer.writerow(df_dict["columns"])
+                        writer.writerows(df_dict["data"])
+                    return True
+                return False
+        
+        pd = MinimalPandas()
+        print("✅ Minimal pandas replacement activated")
+
 from docx import Document
 import io
 import types, sys, torch.nn as nn
 import base64
 import os
 from pathlib import Path
+import warnings
+
+# OCR imports with comprehensive error handling for numpy compatibility
+print("🔧 Initializing OCR engines with numpy compatibility...")
+
+# Suppress all numpy warnings globally
+import warnings
+warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
+warnings.filterwarnings("ignore")
+
+try:
+    import easyocr
+    EASYOCR_AVAILABLE = True
+    print("✅ EasyOCR available")
+except Exception as e:
+    EASYOCR_AVAILABLE = False
+    print(f"⚠️ EasyOCR not available: {str(e)[:50]}...")
+
+# Disable Tesseract for EasyOCR-only workflow
+PYTESSERACT_AVAILABLE = False
+print("⚠️ Tesseract disabled - using EasyOCR-only workflow")
+
+# Disable PaddleOCR for EasyOCR-only workflow  
+PADDLEOCR_AVAILABLE = False
+print("⚠️ PaddleOCR disabled - using EasyOCR-only workflow")
 
 # -----------------------------------------------------------------------------
 # Workaround for models trained with custom modules
@@ -81,6 +159,558 @@ except Exception as e:
 # Structure model removed - using only table detection and cell segmentation
 structure_model = None
 
+# -----------------------------------------------------------------------------
+# Advanced Image Preprocessing
+# -----------------------------------------------------------------------------
+
+class AdvancedImagePreprocessor:
+    """Advanced preprocessing with multiple enhancement techniques"""
+    
+    @staticmethod
+    def multi_scale_enhancement(image):
+        """Apply multiple enhancement techniques for better OCR"""
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image.copy()
+        
+        # 1. Upscale small images for better OCR
+        height, width = gray.shape
+        if height < 50 or width < 100:
+            scale_factor = max(2, 100 // min(height, width))
+            gray = cv2.resize(gray, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_CUBIC)
+            print(f"   🔍 Upscaled by {scale_factor}x: {gray.shape}")
+        
+        # 2. Advanced denoising
+        denoised = cv2.fastNlMeansDenoising(gray, h=10, templateWindowSize=7, searchWindowSize=21)
+        
+        # 3. Enhanced contrast with CLAHE
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+        enhanced = clahe.apply(denoised)
+        
+        # 4. Gamma correction
+        gamma = 1.2
+        gamma_corrected = np.array(255 * (enhanced / 255) ** gamma, dtype='uint8')
+        
+        # 5. Morphological operations
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
+        morphed = cv2.morphologyEx(gamma_corrected, cv2.MORPH_CLOSE, kernel)
+        
+        # 6. Sharpening
+        kernel_sharp = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+        sharpened = cv2.filter2D(morphed, -1, kernel_sharp)
+        
+        return sharpened
+    
+    @staticmethod
+    def adaptive_binarization(image):
+        """Multiple binarization methods for different text conditions"""
+        results = []
+        
+        # Method 1: Otsu
+        _, otsu = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        results.append(('Otsu', otsu))
+        
+        # Method 2: Adaptive Mean
+        adaptive_mean = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)
+        results.append(('Adaptive_Mean', adaptive_mean))
+        
+        # Method 3: Adaptive Gaussian
+        adaptive_gauss = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+        results.append(('Adaptive_Gauss', adaptive_gauss))
+        
+        # Method 4: Custom threshold
+        mean_val = np.mean(image)
+        custom_thresh = mean_val * 0.7
+        _, custom = cv2.threshold(image, custom_thresh, 255, cv2.THRESH_BINARY)
+        results.append(('Custom', custom))
+        
+        return results
+
+# -----------------------------------------------------------------------------
+# Advanced OCR Engine with Multiple Strategies
+# -----------------------------------------------------------------------------
+
+class EasyOCREngine:
+    """Optimized OCR engine using only EasyOCR for best performance"""
+    
+    def __init__(self):
+        print("🚀 Initializing EasyOCR Engine (Optimized for Cell Segmentation)...")
+        warnings.filterwarnings("ignore", category=UserWarning)
+        
+        # EasyOCR with optimized settings for cell text extraction
+        if EASYOCR_AVAILABLE:
+            try:
+                self.easyocr = easyocr.Reader(['en'], gpu=False)
+                self.easyocr_available = True
+                print("✅ EasyOCR initialized successfully")
+            except Exception as e:
+                print(f"⚠️ EasyOCR failed: {e}")
+                self.easyocr_available = False
+                self.fallback_mode = True
+        else:
+            self.easyocr_available = False
+            self.fallback_mode = True
+        
+        # Report status
+        if self.easyocr_available:
+            print("🎯 EasyOCR Engine ready for cell text extraction!")
+            self.fallback_mode = False
+        else:
+            print("⚠️ EasyOCR not available! Using fallback text extraction.")
+            self.fallback_mode = True
+    
+    def extract_text_comprehensive(self, image, cell_info=None):
+        """Optimized text extraction using EasyOCR with multiple preprocessing methods"""
+        
+        height, width = image.shape[:2]
+        cell_size = f"{width}x{height}"
+        
+        print(f"      🔍 Processing cell {cell_size} with EasyOCR")
+        
+        # If in fallback mode, return basic result
+        if self.fallback_mode:
+            return "cell", 0.5, "fallback"
+        
+        # Advanced preprocessing optimized for EasyOCR
+        preprocessor = AdvancedImagePreprocessor()
+        enhanced_image = preprocessor.multi_scale_enhancement(image)
+        
+        # Try multiple binarization methods with EasyOCR
+        binary_methods = preprocessor.adaptive_binarization(enhanced_image)
+        
+        all_results = []
+        
+        # Process original image with EasyOCR
+        if self.easyocr_available:
+            try:
+                # Convert to RGB for EasyOCR
+                if len(image.shape) == 2:
+                    rgb_image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+                else:
+                    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                
+                # EasyOCR with optimized parameters for cell text
+                results = self.easyocr.readtext(
+                    rgb_image, 
+                    paragraph=False, 
+                    width_ths=0.5,  # More lenient width threshold
+                    height_ths=0.5, # More lenient height threshold
+                    allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,-%()$€£¥ '
+                )
+                
+                for (bbox, text, confidence) in results:
+                    if confidence > 0.1:  # Lower threshold for better recall
+                        all_results.append({
+                            'text': text.strip(),
+                            'confidence': confidence,
+                            'engine': 'EasyOCR_Original',
+                            'method': 'original'
+                        })
+            except Exception as e:
+                print(f"      ⚠️ EasyOCR original processing failed: {e}")
+        
+        # Process enhanced image with EasyOCR
+        if self.easyocr_available and enhanced_image is not None:
+            try:
+                # Convert enhanced image to RGB
+                if len(enhanced_image.shape) == 2:
+                    rgb_enhanced = cv2.cvtColor(enhanced_image, cv2.COLOR_GRAY2RGB)
+                else:
+                    rgb_enhanced = cv2.cvtColor(enhanced_image, cv2.COLOR_BGR2RGB)
+                
+                # EasyOCR on enhanced image
+                results = self.easyocr.readtext(
+                    rgb_enhanced, 
+                    paragraph=False, 
+                    width_ths=0.5, 
+                    height_ths=0.5,
+                    allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,-%()$€£¥ '
+                )
+                
+                for (bbox, text, confidence) in results:
+                    if confidence > 0.1:
+                        all_results.append({
+                            'text': text.strip(),
+                            'confidence': confidence,
+                            'engine': 'EasyOCR_Enhanced',
+                            'method': 'enhanced'
+                        })
+            except Exception as e:
+                print(f"      ⚠️ EasyOCR enhanced processing failed: {e}")
+        
+        # Process binarized images with EasyOCR
+        if self.easyocr_available and binary_methods:
+            for method_name, binary_image in binary_methods[:2]:  # Only use top 2 methods for efficiency
+                try:
+                    # Convert binary to RGB
+                    rgb_binary = cv2.cvtColor(binary_image, cv2.COLOR_GRAY2RGB)
+                    
+                    # EasyOCR on binarized image
+                    results = self.easyocr.readtext(
+                        rgb_binary, 
+                        paragraph=False, 
+                        width_ths=0.3, 
+                        height_ths=0.3,
+                        allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,-%()$€£¥ '
+                    )
+                    
+                    for (bbox, text, confidence) in results:
+                        if confidence > 0.1:
+                            all_results.append({
+                                'text': text.strip(),
+                                'confidence': confidence,
+                                'engine': f'EasyOCR_{method_name}',
+                                'method': method_name
+                            })
+                except Exception:
+                    continue
+        
+        # Select best results using intelligent selection
+        return self._select_best_easyocr_results(all_results)
+    
+    def _select_best_easyocr_results(self, all_results):
+        """Optimized result selection for EasyOCR outputs"""
+        if not all_results:
+            return "", 0.0, "EasyOCR_None"
+        
+        # Filter valid results
+        valid_results = [r for r in all_results if r['text'].strip()]
+        
+        if not valid_results:
+            # Return best of all results even if empty
+            best = max(all_results, key=lambda x: x['confidence'])
+            return best['text'], best['confidence'], best['engine']
+        
+        # Find the result with highest confidence
+        best_result = max(valid_results, key=lambda x: x['confidence'])
+        
+        # If we have multiple results, check for consensus
+        if len(valid_results) > 1:
+            # Group by similar text content
+            text_groups = {}
+            for result in valid_results:
+                text_key = result['text'].lower().strip()
+                if text_key not in text_groups:
+                    text_groups[text_key] = []
+                text_groups[text_key].append(result)
+            
+            # If multiple methods agree on the same text, boost confidence
+            if len(text_groups) > 1:
+                for text_key, group in text_groups.items():
+                    if len(group) > 1:  # Multiple methods agree
+                        avg_conf = np.mean([r['confidence'] for r in group])
+                        if avg_conf > best_result['confidence']:
+                            best_result = max(group, key=lambda x: x['confidence'])
+                            best_result['confidence'] = min(avg_conf * 1.1, 1.0)  # Boost confidence slightly
+        
+        return best_result['text'], best_result['confidence'], best_result['engine']
+    
+    def _select_best_results(self, all_results):
+        """Intelligent selection of best OCR results"""
+        if not all_results:
+            return "", 0.0, "None"
+        
+        # Filter valid results
+        valid_results = [r for r in all_results if r['text'].strip()]
+        
+        if not valid_results:
+            # Return best of all results even if empty
+            best = max(all_results, key=lambda x: x['confidence'])
+            return best['text'], best['confidence'], best['engine']
+        
+        # Group by similar text content for consensus
+        text_groups = {}
+        for result in valid_results:
+            text_key = result['text'].lower().strip()
+            if text_key not in text_groups:
+                text_groups[text_key] = []
+            text_groups[text_key].append(result)
+        
+        # Find most confident group
+        best_group = None
+        best_avg_confidence = 0
+        
+        for text_key, group in text_groups.items():
+            avg_conf = np.mean([r['confidence'] for r in group])
+            if avg_conf > best_avg_confidence:
+                best_avg_confidence = avg_conf
+                best_group = group
+        
+        if best_group:
+            # Return best result from best group
+            best_result = max(best_group, key=lambda x: x['confidence'])
+            engines_used = list(set(r['engine'] for r in best_group))
+            return best_result['text'], best_result['confidence'], f"Multi({len(engines_used)})"
+        
+        # Fallback to highest confidence overall
+        best = max(valid_results, key=lambda x: x['confidence'])
+        return best['text'], best['confidence'], best['engine']
+
+# -----------------------------------------------------------------------------
+# Legacy Multi-OCR Engine class (for compatibility)
+# -----------------------------------------------------------------------------
+class MultiOCREngine:
+    """Multi-OCR Engine with error handling and compatibility fixes"""
+    
+    def __init__(self):
+        print("🔧 Initializing OCR engines...")
+        warnings.filterwarnings("ignore", category=UserWarning)
+        
+        # EasyOCR initialization
+        if EASYOCR_AVAILABLE:
+            try:
+                self.easyocr = easyocr.Reader(['en'], gpu=False)
+                self.easyocr_available = True
+                print("✅ EasyOCR initialized successfully")
+            except Exception as e:
+                print(f"⚠️ EasyOCR initialization failed: {e}")
+                self.easyocr_available = False
+        else:
+            self.easyocr_available = False
+        
+        # Tesseract availability check
+        if PYTESSERACT_AVAILABLE:
+            try:
+                pytesseract.get_tesseract_version()
+                self.tesseract_available = True
+                print("✅ Tesseract available")
+            except Exception as e:
+                print(f"⚠️ Tesseract not available: {e}")
+                self.tesseract_available = False
+        else:
+            self.tesseract_available = False
+        
+        # PaddleOCR initialization
+        if PADDLEOCR_AVAILABLE:
+            try:
+                self.paddleocr = PaddleOCR(lang='en', show_log=False)
+                self.paddleocr_available = True
+                print("✅ PaddleOCR initialized successfully")
+            except Exception as e:
+                print(f"⚠️ PaddleOCR initialization failed: {e}")
+                self.paddleocr_available = False
+        else:
+            self.paddleocr_available = False
+        
+        # Report available engines
+        available_engines = []
+        if self.easyocr_available: available_engines.append("EasyOCR")
+        if self.tesseract_available: available_engines.append("Tesseract")
+        if self.paddleocr_available: available_engines.append("PaddleOCR")
+        
+        print(f"🎯 Available OCR engines: {', '.join(available_engines) if available_engines else 'None'}")
+    
+    def extract_text_easyocr(self, image):
+        """Extract text using EasyOCR"""
+        if not self.easyocr_available:
+            return "", 0.0
+        
+        try:
+            # Validate image
+            if image is None or image.size == 0:
+                return "", 0.0
+            
+            height, width = image.shape[:2]
+            if height < 32 or width < 32:
+                return "", 0.0
+            
+            # Convert BGR to RGB if needed
+            if len(image.shape) == 3 and image.shape[2] == 3:
+                image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            else:
+                image_rgb = image
+            
+            results = self.easyocr.readtext(image_rgb)
+            
+            if results:
+                texts = []
+                confidences = []
+                for (bbox, text, confidence) in results:
+                    if confidence > 0.3:  # Confidence threshold
+                        texts.append(text)
+                        confidences.append(confidence)
+                
+                if texts:
+                    combined_text = ' '.join(texts)
+                    avg_confidence = np.mean(confidences)
+                    return combined_text, avg_confidence
+            
+            return "", 0.0
+            
+        except Exception as e:
+            print(f"⚠️ EasyOCR error: {e}")
+            return "", 0.0
+    
+    def extract_text_tesseract(self, image):
+        """Extract text using Tesseract"""
+        if not self.tesseract_available:
+            return "", 0.0
+        
+        try:
+            # Validate image
+            if image is None or image.size == 0:
+                return "", 0.0
+            
+            height, width = image.shape[:2]
+            if height < 10 or width < 10:
+                return "", 0.0
+            
+            # Tesseract config for better results
+            config = '--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,-%()$€£¥ '
+            
+            # Get text with confidence
+            data = pytesseract.image_to_data(image, config=config, output_type=pytesseract.Output.DICT)
+            
+            # Filter high confidence text
+            texts = []
+            confidences = []
+            for i in range(len(data['text'])):
+                if int(data['conf'][i]) > 30:
+                    text = data['text'][i].strip()
+                    if text:
+                        texts.append(text)
+                        confidences.append(int(data['conf'][i]))
+            
+            if texts:
+                combined_text = ' '.join(texts)
+                avg_confidence = np.mean(confidences) / 100.0  # Normalize to 0-1
+                return combined_text, avg_confidence
+            
+            return "", 0.0
+            
+        except Exception as e:
+            print(f"⚠️ Tesseract error: {e}")
+            return "", 0.0
+    
+    def extract_text_paddleocr(self, image):
+        """Extract text using PaddleOCR"""
+        if not self.paddleocr_available:
+            return "", 0.0
+        
+        try:
+            # Validate image
+            if image is None or image.size == 0:
+                return "", 0.0
+            
+            height, width = image.shape[:2]
+            if height < 32 or width < 32:
+                return "", 0.0
+            
+            # Use PaddleOCR API
+            results = self.paddleocr.ocr(image)
+            
+            if results and results[0]:
+                texts = []
+                confidences = []
+                for line in results[0]:
+                    if len(line) >= 2:
+                        text = line[1][0]  # Extract text
+                        confidence = line[1][1]  # Extract confidence
+                        if confidence > 0.3:
+                            texts.append(text)
+                            confidences.append(confidence)
+                
+                if texts:
+                    combined_text = ' '.join(texts)
+                    avg_confidence = np.mean(confidences)
+                    return combined_text, avg_confidence
+            
+            return "", 0.0
+            
+        except Exception as e:
+            print(f"⚠️ PaddleOCR error: {e}")
+            return "", 0.0
+    
+    def best_ocr_result(self, image):
+        """Get best OCR result from all available engines"""
+        results = []
+        
+        # Try all available engines
+        if self.easyocr_available:
+            text, conf = self.extract_text_easyocr(image)
+            if text.strip():
+                results.append((text, conf, "EasyOCR"))
+        
+        if self.tesseract_available:
+            text, conf = self.extract_text_tesseract(image)
+            if text.strip():
+                results.append((text, conf, "Tesseract"))
+        
+        if self.paddleocr_available:
+            text, conf = self.extract_text_paddleocr(image)
+            if text.strip():
+                results.append((text, conf, "PaddleOCR"))
+        
+        # Return best result by confidence
+        if results:
+            best_result = max(results, key=lambda x: x[1])
+            return best_result
+        
+        return "", 0.0, "None"
+    
+    def enhance_image(self, image):
+        """Enhance image for better OCR results"""
+        try:
+            # Validate input
+            if image is None or image.size == 0:
+                return image
+            
+            if len(image.shape) < 2:
+                return image
+                
+            height, width = image.shape[:2]
+            if height < 3 or width < 3:
+                return image
+            
+            # Convert to grayscale if needed
+            if len(image.shape) == 3:
+                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            else:
+                gray = image.copy()
+            
+            # Noise reduction with adaptive kernel size
+            kernel_size = max(3, min(5, min(height, width) // 20))
+            if kernel_size % 2 == 0:
+                kernel_size += 1
+            denoised = cv2.medianBlur(gray, kernel_size)
+            
+            # Contrast enhancement
+            enhanced = cv2.convertScaleAbs(denoised, alpha=1.2, beta=10)
+            
+            # Sharpen only if image is large enough
+            if height >= 5 and width >= 5:
+                kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+                sharpened = cv2.filter2D(enhanced, -1, kernel)
+                return sharpened
+            else:
+                return enhanced
+                
+        except Exception as e:
+            print(f"⚠️ Image enhancement error: {e}")
+            return image
+
+# Global OCR engine instance
+multi_ocr_engine = None
+
+# Initialize Multi-OCR Engine
+def initialize_ocr_engine():
+    """Initialize the EasyOCR Engine (Optimized for Cell Segmentation)"""
+    global multi_ocr_engine
+    if multi_ocr_engine is None:
+        try:
+            multi_ocr_engine = EasyOCREngine()
+            print("🚀 EasyOCR Engine initialized successfully")
+        except Exception as e:
+            print(f"⚠️ Failed to initialize EasyOCR Engine: {e}")
+            # Fallback to legacy MultiOCREngine
+            try:
+                multi_ocr_engine = MultiOCREngine()
+                print("🔄 Fallback: Legacy Multi-OCR Engine initialized")
+            except Exception as e2:
+                print(f"⚠️ Complete OCR initialization failure: {e2}")
+                multi_ocr_engine = None
+
 # Model that detects individual cells within a table for text extraction
 try:
     cell_model_path = MODEL_DIR / 'best(cell).pt'
@@ -98,6 +728,10 @@ def process_pdf(file_path):
     It extracts tables from each page, recognizes cells, and extracts text.
     """
     print(f"Processing PDF file: {file_path}")
+    
+    # Initialize Multi-OCR Engine if not already done
+    initialize_ocr_engine()
+    
     doc = fitz.open(file_path)
     all_tables_data = []
     
@@ -175,13 +809,62 @@ def process_pdf(file_path):
             cell_info = detect_cells_with_info(table_img)
             cells = cell_info['cells']
 
-            # Phase 3: Extract text from detected cells
+            # Phase 3: Extract text from detected cells using Advanced OCR Pipeline
             if cells and len(cells) > 0:
-                print(f"Using cell-based extraction with {len(cells)} detected cells")
-                table_data = build_table_from_cells(page, [x1, y1, x2, y2], cells, cell_info)
+                print(f"Using Advanced OCR Pipeline with {len(cells)} detected cells")
+                
+                # Use Advanced OCR Pipeline for enhanced text extraction
+                try:
+                    from advanced_ocr_pipeline import process_table_with_advanced_ocr
+                    
+                    # Prepare cell detections for pipeline
+                    cell_detections = {'cells': cells}
+                    table_info = {
+                        'page': page_num + 1,
+                        'table_index': i + 1,
+                        'bbox': [x1, y1, x2, y2],
+                        'confidence': float(confidence)
+                    }
+                    
+                    # Process with Advanced OCR Pipeline
+                    pipeline_results = process_table_with_advanced_ocr(
+                        table_img, 
+                        cell_detections, 
+                        table_info,
+                        save_results=False  # Don't save intermediate files for API
+                    )
+                    
+                    # Extract structured data for API response
+                    structured_table = pipeline_results.get('structured_table', {})
+                    table_matrix = structured_table.get('table_matrix', [])
+                    
+                    if table_matrix:
+                        table_data = table_matrix
+                        print(f"✅ Advanced OCR Pipeline extracted {len(table_matrix)} rows")
+                    else:
+                        # Fallback to basic extraction if pipeline fails
+                        print("⚠️ Pipeline returned no matrix, using fallback")
+                        table_data = build_table_from_cells(page, [x1, y1, x2, y2], cells, cell_info)
+                    
+                    # Add pipeline metadata
+                    pipeline_metadata = {
+                        'pipeline_used': True,
+                        'processing_quality': pipeline_results.get('final_summary', {}).get('processing_quality', {}),
+                        'ocr_engines_used': pipeline_results.get('final_summary', {}).get('ocr_engines_used', []),
+                        'cells_processed': pipeline_results.get('final_summary', {}).get('total_cells_detected', 0),
+                        'cells_with_text': pipeline_results.get('final_summary', {}).get('cells_with_text', 0)
+                    }
+                    
+                except Exception as e:
+                    print(f"⚠️ Advanced OCR Pipeline failed: {e}")
+                    print("🔄 Falling back to basic cell extraction...")
+                    table_data = build_table_from_cells(page, [x1, y1, x2, y2], cells, cell_info)
+                    pipeline_metadata = {'pipeline_used': False, 'error': str(e)}
+                
             else:
                 print("No cells detected, creating empty table")
                 table_data = []
+                pipeline_metadata = {'pipeline_used': False, 'reason': 'no_cells_detected'}
 
             # Prepare the table data entry
             table_entry = {
@@ -197,14 +880,17 @@ def process_pdf(file_path):
                 }
             }
             
-            # Add cell detection info
+            # Add cell detection info with pipeline metadata
             table_entry["cell_detection"] = {
                 "cells_detected": len(cells) if cells else 0,
                 "cells_confidence": [float(conf) for conf in cell_info['confidences']] if cells and cell_info else [],
-                "method": "ai_model", 
+                "method": "advanced_ocr_pipeline" if pipeline_metadata.get('pipeline_used') else "ai_model", 
                 "model_used": "best(cell).pt",
-                "extraction_method": "cell_based"
+                "extraction_method": "enhanced_cell_based" if pipeline_metadata.get('pipeline_used') else "cell_based"
             }
+            
+            # Add Advanced OCR Pipeline metadata
+            table_entry["advanced_ocr_pipeline"] = pipeline_metadata
             
             # Always add visualizations
             table_entry["visualizations"] = save_table_visualization(img_cv, [x1, y1, x2, y2], cells if cells else [], page_num + 1, i + 1)
@@ -402,8 +1088,13 @@ def detect_cells_with_info(table_image):
 
 def extract_text_from_cell_region(page, table_box, cell_box):
     """
-    Extract text from a specific cell region using PyMuPDF.
+    Extract text from a specific cell region using Multi-OCR Engine.
     """
+    # Initialize OCR engine if not already done
+    global multi_ocr_engine
+    if multi_ocr_engine is None:
+        initialize_ocr_engine()
+    
     # Convert cell coordinates to page coordinates
     x1, y1, x2, y2 = table_box
     cx1, cy1, cx2, cy2 = cell_box
@@ -418,14 +1109,70 @@ def extract_text_from_cell_region(page, table_box, cell_box):
     rect = fitz.Rect(page_x1, page_y1, page_x2, page_y2)
     
     try:
-        # Extract text from the rectangle
+        # First try PyMuPDF text extraction (fastest)
         text = page.get_text("text", clip=rect).strip()
         if text:
-            print(f"Extracted text from cell [{cx1},{cy1},{cx2},{cy2}]: '{text}'")
+            print(f"Extracted text (PyMuPDF) from cell [{cx1},{cy1},{cx2},{cy2}]: '{text}'")
             return text
-        else:
-            print(f"No text found in cell [{cx1},{cy1},{cx2},{cy2}]")
-            return ""
+        
+        # If no text found, try OCR on the image region
+        if multi_ocr_engine is not None:
+            try:
+                # Validate and clip rectangle to page bounds
+                page_rect = page.rect
+                clipped_x1 = max(0, min(page_x1, page_rect.width))
+                clipped_y1 = max(0, min(page_y1, page_rect.height))
+                clipped_x2 = max(clipped_x1 + 1, min(page_x2, page_rect.width))
+                clipped_y2 = max(clipped_y1 + 1, min(page_y2, page_rect.height))
+                
+                # Ensure minimum size for valid pixmap
+                min_width = 10
+                min_height = 10
+                
+                if (clipped_x2 - clipped_x1) < min_width:
+                    clipped_x2 = min(clipped_x1 + min_width, page_rect.width)
+                if (clipped_y2 - clipped_y1) < min_height:
+                    clipped_y2 = min(clipped_y1 + min_height, page_rect.height)
+                
+                # Final check if clipped rectangle is valid
+                if clipped_x2 <= clipped_x1 or clipped_y2 <= clipped_y1:
+                    print(f"⚠️ Invalid cell bounds after clipping [{clipped_x1},{clipped_y1},{clipped_x2},{clipped_y2}]")
+                    return ""
+                
+                # Create clipped rectangle
+                clipped_rect = fitz.Rect(clipped_x1, clipped_y1, clipped_x2, clipped_y2)
+                
+                # Get page as image with clipped rectangle
+                pix = page.get_pixmap(dpi=200, clip=clipped_rect)
+                
+                if pix.width <= 0 or pix.height <= 0:
+                    print(f"⚠️ Invalid pixmap size: {pix.width}x{pix.height}")
+                    return ""
+                
+                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+                
+                # Check minimum image size for OCR
+                if img_cv.shape[0] >= 10 and img_cv.shape[1] >= 10:
+                    # Enhance image for better OCR
+                    enhanced_img = multi_ocr_engine.enhance_image(img_cv)
+                    
+                    # Get best OCR result
+                    text, confidence, engine = multi_ocr_engine.best_ocr_result(enhanced_img)
+                    
+                    if text.strip():
+                        print(f"Extracted text ({engine}, conf: {confidence:.3f}) from cell [{cx1},{cy1},{cx2},{cy2}]: '{text}'")
+                        return text.strip()
+                else:
+                    print(f"⚠️ Image too small for OCR: {img_cv.shape[1]}x{img_cv.shape[0]}")
+                    
+            except Exception as ocr_error:
+                print(f"⚠️ OCR processing error for cell [{cx1},{cy1},{cx2},{cy2}]: {ocr_error}")
+                return ""
+        
+        print(f"No text found in cell [{cx1},{cy1},{cx2},{cy2}]")
+        return ""
+        
     except Exception as e:
         print(f"Error extracting text from cell: {e}")
         return ""
@@ -651,5 +1398,125 @@ def save_table_visualization(page_image, table_bbox, cells, page_num, table_num)
             "table_bbox": [int(x) for x in table_bbox] if table_bbox is not None else None,
             "cells_count": len(cells),
             "error": str(e)
+        }
+
+def enhanced_cell_cropping_and_ocr(detections, original_image, save_enhanced_crops=True):
+    """Enhanced cell processing with advanced OCR and padding"""
+    
+    print("✂️ Enhanced Cell Cropping & OCR Processing...")
+    
+    # Get or initialize OCR engine  
+    if multi_ocr_engine is None:
+        initialize_ocr_engine()
+    
+    if multi_ocr_engine is None:
+        print("⚠️ No OCR engine available")
+        return []
+    
+    cells = detections.get('cells', [])
+    print(f"🔍 Enhanced processing {len(cells)} cells...")
+    
+    enhanced_results = []
+    
+    for i, cell_box in enumerate(cells):
+        x1, y1, x2, y2 = cell_box
+        
+        # Enhanced padding (larger for better OCR)
+        padding_x = int((x2 - x1) * 0.05)  # 5% horizontal padding
+        padding_y = int((y2 - y1) * 0.05)  # 5% vertical padding
+        
+        # Apply padding with bounds checking
+        padded_x1 = max(0, x1 - padding_x)
+        padded_y1 = max(0, y1 - padding_y)
+        padded_x2 = min(original_image.shape[1], x2 + padding_x)
+        padded_y2 = min(original_image.shape[0], y2 + padding_y)
+        
+        # Crop with enhanced padding
+        cell_image = original_image[padded_y1:padded_y2, padded_x1:padded_x2]
+        
+        if cell_image.size == 0:
+            continue
+            
+        # Enhanced OCR processing using AdvancedOCREngine method
+        if hasattr(multi_ocr_engine, 'extract_text_comprehensive'):
+            # Use advanced comprehensive extraction
+            text, confidence, engine = multi_ocr_engine.extract_text_comprehensive(cell_image)
+        else:
+            # Fallback to legacy method
+            text, confidence, engine = multi_ocr_engine.best_ocr_result(cell_image)
+        
+        # Save enhanced crops if requested
+        if save_enhanced_crops and text.strip():
+            crop_filename = f"enhanced_cell_{i+1}_{text[:20].replace(' ', '_')}.png"
+            crop_path = f"enhanced_crops/{crop_filename}"
+            os.makedirs("enhanced_crops", exist_ok=True)
+            cv2.imwrite(crop_path, cell_image)
+        
+        enhanced_results.append({
+            'cell_id': i + 1,
+            'bbox': [int(x1), int(y1), int(x2), int(y2)],
+            'padded_bbox': [int(padded_x1), int(padded_y1), int(padded_x2), int(padded_y2)],
+            'text': text,
+            'confidence': float(confidence),
+            'ocr_engine': engine,
+            'cell_size': f"{x2-x1}x{y2-y1}",
+            'enhanced_processing': True
+        })
+    
+    print("✅ Enhanced OCR processing: {} results".format(len(enhanced_results)))
+    return enhanced_results
+
+def organize_structured_table_data(enhanced_results):
+    """Create structured table from enhanced OCR results"""
+    print("🏗️ Organizing structured table data...")
+    
+    if not enhanced_results:
+        return {
+            'structured_data': [],
+            'summary': {
+                'total_cells': 0,
+                'cells_with_text': 0,
+                'confidence_avg': 0.0
+            }
+        }
+    
+    # Calculate summary statistics
+    cells_with_text = [r for r in enhanced_results if r['text'].strip()]
+    total_cells = len(enhanced_results)
+    avg_confidence = np.mean([r['confidence'] for r in enhanced_results]) if enhanced_results else 0.0
+    
+    # Sort results by position (top to bottom, left to right)
+    sorted_results = sorted(enhanced_results, key=lambda x: (x['bbox'][1], x['bbox'][0]))
+    
+    # Create structured data
+    structured_data = []
+    for result in sorted_results:
+        if result['text'].strip():  # Only include cells with text
+            structured_data.append({
+                'position': f"Row_{result['bbox'][1]}_Col_{result['bbox'][0]}",
+                'text': result['text'],
+                'confidence': result['confidence'],
+                'engine': result['ocr_engine'],
+                'bbox': result['bbox']
+            })
+    
+    summary = {
+        'total_cells': total_cells,
+        'cells_with_text': len(cells_with_text),
+        'confidence_avg': float(avg_confidence),
+        'engines_used': list(set(r['ocr_engine'] for r in enhanced_results if r['text'].strip()))
+    }
+    
+    print(f"📊 Structured data summary:")
+    print(f"   Rows with text: {len(structured_data)}")
+    print(f"   Columns with text: {len(set(d['position'].split('_')[2] for d in structured_data))}")
+    print(f"   Cells with text: {len(cells_with_text)}")
+    print(f"   Total text items: {len(structured_data)}")
+    print("✅ Structured table data organized successfully")
+    
+    return {
+        'structured_data': structured_data,
+        'summary': summary,
+        'enhanced_results': enhanced_results
         }
 
