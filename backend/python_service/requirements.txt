@@ -12,4 +12,9 @@ python-multipart
 scipy
 openpyxl
 pytesseract
-Pillow 
+Pillow
+easyocr
+openai
+groq
+requests
+python-dotenv 

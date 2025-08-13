@@ -20,7 +20,7 @@
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │  Node.js API    │    │ Python Service  │
 │   (React)       │◄──►│   (Express)     │◄──►│    (FastAPI)    │
-│   Port: 5173    │    │   Port: 8080    │    │   Port: 8001    │
+│   Port: 5173    │    │   Port: 8080    │    │   Port: 8005    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                                        │
                                               ┌─────────────────┐
@@ -163,7 +163,7 @@ npm run dev
 ### 6. Truy cập ứng dụng
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:8080
-- **Python Service**: http://localhost:8001
+- **Python Service**: http://localhost:8005
 
 ## 📋 Hướng dẫn sử dụng
 
@@ -233,7 +233,7 @@ Xử lý file PDF với AI models
 ```python
 import requests
 files = {'file': open('document.pdf', 'rb')}
-response = requests.post('http://localhost:8001/api/extract', files=files)
+response = requests.post('http://localhost:8005/api/extract', files=files)
 ```
 
 ## 🐛 Troubleshooting
@@ -259,7 +259,7 @@ pip install -r requirements.txt
 #### 3. Frontend không connect được backend
 ```bash
 # Kiểm tra ports
-netstat -an | findstr "5173 8080 8001"
+netstat -an | findstr "5173 8080 8005"
 ```
 
 #### 4. Không extract được text

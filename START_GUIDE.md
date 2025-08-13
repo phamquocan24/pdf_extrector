@@ -2,7 +2,7 @@
 
 ## 🚀 Khởi động tất cả services
 
-### 1. Python Service (Port 8001)
+### 1. Python Service (Port 8005)
 ```bash
 cd backend/python_service
 python app.py
@@ -23,7 +23,7 @@ npm run dev
 ## 📋 Kiểm tra services
 
 ### Kiểm tra Python Service:
-- URL: http://localhost:8001
+- URL: http://localhost:8005
 - Test endpoint: POST /api/extract
 
 ### Kiểm tra Node.js Backend:

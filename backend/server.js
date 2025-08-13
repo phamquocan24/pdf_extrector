@@ -50,7 +50,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     form.append("file", fs.createReadStream(filePath));
 
     // Forward the file to the Python service
-    const pythonServiceUrl = "http://localhost:8001/api/extract";
+    const pythonServiceUrl = "http://localhost:8005/api/extract";
     const response = await axios.post(pythonServiceUrl, form, {
       headers: {
         ...form.getHeaders(),

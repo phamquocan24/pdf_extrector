@@ -35,4 +35,4 @@ async def extract_data(file: UploadFile = File(...)):
             os.remove(file_path)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001) 
+    uvicorn.run(app, host="0.0.0.0", port=8005) 

@@ -91,6 +91,9 @@ const DashboardPage = () => {
       }
       
       setSnackbar({ open: true, message: errorMessage, severity: 'error' });
+    } finally {
+      // Reset file input để có thể upload lại cùng file
+      event.target.value = '';
     }
   };
 
@@ -117,7 +120,15 @@ const DashboardPage = () => {
   };
 
   const handleDownload = () => {
-    if (!selectedFile || !selectedFile.data) { handleMenuClose(); return; }
+    if (!selectedFile || !selectedFile.data) { 
+      setSnackbar({ 
+        open: true, 
+        message: 'Không có dữ liệu để tải xuống. Vui lòng đợi file xử lý xong!', 
+        severity: 'warning' 
+      });
+      handleMenuClose(); 
+      return; 
+    }
     const blob = new Blob([JSON.stringify(selectedFile.data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -129,7 +140,15 @@ const DashboardPage = () => {
   };
 
   const handlePreview = () => {
-    if (!selectedFile || !selectedFile.data) { handleMenuClose(); return; }
+    if (!selectedFile || !selectedFile.data) { 
+      setSnackbar({ 
+        open: true, 
+        message: 'Không có dữ liệu để xem trước. Vui lòng đợi file xử lý xong!', 
+        severity: 'warning' 
+      });
+      handleMenuClose(); 
+      return; 
+    }
     navigate('/preview', { 
       state: { 
         data: selectedFile.data, 
@@ -232,6 +251,10 @@ const DashboardPage = () => {
                         Đang xử lý...
                       </Typography>
                     </Box>
+                  ) : file.status === 'error' ? (
+                    <Typography variant="body2" color="error.main">
+                      Lỗi xử lý
+                    </Typography>
                   ) : (
                     <Typography variant="body2" color="success.main">
                       Đã hoàn thành
@@ -251,13 +274,19 @@ const DashboardPage = () => {
             sx: { minWidth: 180 },
           }}
         >
-          <MenuItem onClick={handlePreview}>
+          <MenuItem 
+            onClick={handlePreview}
+            disabled={!selectedFile || selectedFile.status !== 'completed' || !selectedFile.data}
+          >
             <ListItemIcon>
               <ViewIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText primary="Xem trước" />
           </MenuItem>
-          <MenuItem onClick={handleDownload}>
+          <MenuItem 
+            onClick={handleDownload}
+            disabled={!selectedFile || selectedFile.status !== 'completed' || !selectedFile.data}
+          >
             <ListItemIcon>
               <DownloadIcon fontSize="small" />
             </ListItemIcon>

@@ -50,6 +50,34 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 
+// JSON syntax highlighter function
+const syntaxHighlight = (json) => {
+  if (typeof json !== 'string') {
+    json = JSON.stringify(json, null, 2);
+  }
+  
+  json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  
+  return json.replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    function (match) {
+      let cls = 'number';
+      if (/^"/.test(match)) {
+        if (/:$/.test(match)) {
+          cls = 'key';
+        } else {
+          cls = 'string';
+        }
+      } else if (/true|false/.test(match)) {
+        cls = 'boolean';
+      } else if (/null/.test(match)) {
+        cls = 'null';
+      }
+      return '<span class="' + cls + '">' + match + '</span>';
+    }
+  );
+};
+
 const PreviewPage = () => {
   const theme = useTheme();
   const location = useLocation();
@@ -120,22 +148,36 @@ const PreviewPage = () => {
       return;
     }
     
-    const headers = ['STT', 'Trang', 'Bảng', 'Phương thức', 'Rows', 'Cols', 'Cell Detection', 'Cells Count'];
-    const csvContent = [
-      headers.join(','),
-      ...extractedData.map((table, index) => [
-        index + 1,
-        table.page || 'N/A',
-        table.table || 'N/A',
-        table.method || 'N/A',
-        table.data?.length || 0,
-        table.data?.[0]?.length || 0,
-        table.cell_detection?.method || 'structure_based',
-        table.cell_detection?.cells_detected || 0
-      ].join(','))
-    ].join('\n');
+    // Create CSV content with actual table data
+    let csvContent = '';
     
-    const filename = `${fileName.replace(/\.pdf$/i, '')}_tables.csv`;
+    extractedData.forEach((table, tableIndex) => {
+      // Add table header information
+      csvContent += `\n=== BẢNG ${table.table} - TRANG ${table.page} ===\n`;
+      csvContent += `Phương thức: ${table.method || 'N/A'}, Cells detected: ${table.cell_detection?.cells_detected || 0}\n\n`;
+      
+      // Add table data if available
+      if (table.data && table.data.length > 0) {
+        // Add ALL rows of the table
+        table.data.forEach((row, rowIndex) => {
+          const cleanedRow = row.map(cell => {
+            // Clean cell data - remove newlines and escape quotes for CSV
+            const cellStr = String(cell || '').replace(/"/g, '""').replace(/\n/g, ' ').replace(/\r/g, ' ');
+            return `"${cellStr}"`;
+          });
+          csvContent += cleanedRow.join(',') + '\n';
+        });
+      } else {
+        csvContent += '"Không có dữ liệu cell nào được trích xuất"\n';
+      }
+      
+      // Add separator between tables
+      if (tableIndex < extractedData.length - 1) {
+        csvContent += '\n';
+      }
+    });
+    
+    const filename = `${fileName.replace(/\.pdf$/i, '')}_table_data.csv`;
     downloadFile(csvContent, filename, 'text/csv');
   };
 
@@ -503,8 +545,22 @@ const PreviewPage = () => {
             >
               <CardHeader
                 avatar={<CodeIcon color="primary" />}
-                title="Dữ liệu JSON"
-                subheader="Dữ liệu trích xuất định dạng JSON"
+                title={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    Dữ liệu JSON
+                    <Chip 
+                      label={`${extractedData?.length || 0} tables`}
+                      size="small"
+                      sx={{ 
+                        bgcolor: 'rgba(255, 255, 255, 0.2)', 
+                        color: 'white',
+                        fontSize: '0.7rem',
+                        height: '20px'
+                      }}
+                    />
+                  </Box>
+                }
+                subheader="Dữ liệu trích xuất định dạng JSON (có thể cuộn để xem tất cả)"
                 action={
                   <Tooltip title="Sao chép JSON">
                     <IconButton 
@@ -542,23 +598,27 @@ const PreviewPage = () => {
                     bgcolor: '#1e1e1e',
                     border: '1px solid',
                     borderColor: 'grey.300',
-                    maxHeight: 300,
+                    maxHeight: 500, // Increased height to match CSV
                     overflow: 'auto',
                     borderRadius: 2,
+                    position: 'relative',
                     '&::-webkit-scrollbar': {
-                      width: '8px',
-                      height: '8px',
+                      width: '12px',
+                      height: '12px',
                     },
                     '&::-webkit-scrollbar-track': {
                       background: '#2a2a2a',
-                      borderRadius: '4px',
+                      borderRadius: '6px',
                     },
                     '&::-webkit-scrollbar-thumb': {
-                      background: '#555',
-                      borderRadius: '4px',
+                      background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                      borderRadius: '6px',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #38f9d7 0%, #43e97b 100%)',
+                      }
                     },
-                    '&::-webkit-scrollbar-thumb:hover': {
-                      background: '#777',
+                    '&::-webkit-scrollbar-corner': {
+                      background: '#2a2a2a',
                     },
                   }}
                 >
@@ -567,20 +627,49 @@ const PreviewPage = () => {
                     variant="body2"
                     sx={{
                       fontFamily: '"Consolas", "Monaco", "Courier New", monospace',
-                      fontSize: '0.75rem',
-                      lineHeight: 1.4,
+                      fontSize: '0.8rem', // Slightly larger font
+                      lineHeight: 1.5,
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
                       color: '#f8f8f2',
-                      '& .string': { color: '#e6db74' },
-                      '& .number': { color: '#ae81ff' },
-                      '& .boolean': { color: '#66d9ef' },
-                      '& .null': { color: '#66d9ef' },
-                      '& .key': { color: '#f92672' },
+                      position: 'relative',
+                      '& .string': { color: '#a6e22e' }, // Bright green for strings
+                      '& .number': { color: '#ae81ff' }, // Purple for numbers
+                      '& .boolean': { color: '#66d9ef' }, // Blue for booleans
+                      '& .null': { color: '#f92672' }, // Pink for null
+                      '& .key': { color: '#fd971f' }, // Orange for keys
                     }}
-                  >
-                    {JSON.stringify(extractedData, null, 2)}
-                  </Typography>
+                    dangerouslySetInnerHTML={{
+                      __html: syntaxHighlight(extractedData)
+                    }}
+                  />
+                  
+                  {/* Scroll hint for large JSON data */}
+                  {extractedData && JSON.stringify(extractedData, null, 2).split('\n').length > 20 && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        bottom: 8,
+                        right: 8,
+                        bgcolor: 'rgba(67, 233, 123, 0.8)',
+                        color: 'white',
+                        px: 1,
+                        py: 0.5,
+                        borderRadius: 1,
+                        fontSize: '0.7rem',
+                        fontWeight: 'bold',
+                        pointerEvents: 'none',
+                        animation: 'pulse 2s infinite',
+                        '@keyframes pulse': {
+                          '0%': { opacity: 0.7 },
+                          '50%': { opacity: 1 },
+                          '100%': { opacity: 0.7 },
+                        }
+                      }}
+                    >
+                      ↓ Cuộn xuống ↓
+                    </Box>
+                  )}
                 </Paper>
               </CardContent>
             </Card>
@@ -600,26 +689,55 @@ const PreviewPage = () => {
             >
               <CardHeader
                 avatar={<TableViewIcon color="secondary" />}
-                title="Dữ liệu CSV"
-                subheader="Dữ liệu trích xuất định dạng CSV"
+                title={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    Dữ liệu CSV
+                    <Chip 
+                      label={`${extractedData?.reduce((sum, table) => sum + (table.data?.length || 0), 0) || 0} rows`}
+                      size="small"
+                      sx={{ 
+                        bgcolor: 'rgba(255, 255, 255, 0.2)', 
+                        color: 'white',
+                        fontSize: '0.7rem',
+                        height: '20px'
+                      }}
+                    />
+                  </Box>
+                }
+                subheader="Dữ liệu các cell trong bảng định dạng CSV (có thể cuộn để xem tất cả)"
                 action={
                   <Tooltip title="Sao chép CSV">
                     <IconButton 
                       onClick={() => {
-                        const headers = ['STT', 'Trang', 'Bảng', 'Phương thức', 'Rows', 'Cols', 'Cell Detection', 'Cells Count'];
-                        const csvContent = [
-                          headers.join(','),
-                          ...extractedData.map((table, index) => [
-                            index + 1,
-                            table.page || 'N/A',
-                            table.table || 'N/A',
-                            table.method || 'N/A',
-                            table.data?.length || 0,
-                            table.data?.[0]?.length || 0,
-                            table.cell_detection?.method || 'structure_based',
-                            table.cell_detection?.cells_detected || 0
-                          ].join(','))
-                        ].join('\n');
+                        // Generate actual table data CSV content for copy
+                        let csvContent = '';
+                        
+                        extractedData.forEach((table, tableIndex) => {
+                          // Add table header information
+                          csvContent += `\n=== BẢNG ${table.table} - TRANG ${table.page} ===\n`;
+                          csvContent += `Phương thức: ${table.method || 'N/A'}, Cells detected: ${table.cell_detection?.cells_detected || 0}\n\n`;
+                          
+                          // Add table data if available
+                          if (table.data && table.data.length > 0) {
+                            // Add ALL rows of the table
+                            table.data.forEach((row, rowIndex) => {
+                              const cleanedRow = row.map(cell => {
+                                // Clean cell data - remove newlines and escape quotes for CSV
+                                const cellStr = String(cell || '').replace(/"/g, '""').replace(/\n/g, ' ').replace(/\r/g, ' ');
+                                return `"${cellStr}"`;
+                              });
+                              csvContent += cleanedRow.join(',') + '\n';
+                            });
+                          } else {
+                            csvContent += '"Không có dữ liệu cell nào được trích xuất"\n';
+                          }
+                          
+                          // Add separator between tables
+                          if (tableIndex < extractedData.length - 1) {
+                            csvContent += '\n';
+                          }
+                        });
+                        
                         navigator.clipboard.writeText(csvContent);
                       }}
                       sx={{
@@ -653,23 +771,26 @@ const PreviewPage = () => {
                     bgcolor: '#f8f9fa',
                     border: '1px solid',
                     borderColor: 'grey.300',
-                    maxHeight: 300,
+                    maxHeight: 500, // Increased height for better viewing
                     overflow: 'auto',
                     borderRadius: 2,
                     '&::-webkit-scrollbar': {
-                      width: '8px',
-                      height: '8px',
+                      width: '12px',
+                      height: '12px',
                     },
                     '&::-webkit-scrollbar-track': {
                       background: '#e0e0e0',
-                      borderRadius: '4px',
+                      borderRadius: '6px',
                     },
                     '&::-webkit-scrollbar-thumb': {
-                      background: '#bbb',
-                      borderRadius: '4px',
+                      background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                      borderRadius: '6px',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #e85a87 0%, #e5d137 100%)',
+                      }
                     },
-                    '&::-webkit-scrollbar-thumb:hover': {
-                      background: '#999',
+                    '&::-webkit-scrollbar-corner': {
+                      background: '#e0e0e0',
                     },
                   }}
                 >
@@ -683,25 +804,68 @@ const PreviewPage = () => {
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
                       color: '#333',
+                      position: 'relative',
                     }}
                   >
                     {(() => {
-                      const headers = ['STT', 'Trang', 'Bảng', 'Phương thức', 'Rows', 'Cols', 'Cell Detection', 'Cells Count'];
-                      const csvContent = [
-                        headers.join(','),
-                        ...extractedData.map((table, index) => [
-                          index + 1,
-                          table.page || 'N/A',
-                          table.table || 'N/A',
-                          table.method || 'N/A',
-                          table.data?.length || 0,
-                          table.data?.[0]?.length || 0,
-                          table.cell_detection?.method || 'structure_based',
-                          table.cell_detection?.cells_detected || 0
-                        ].join(','))
-                      ].join('\n');
+                      // Generate actual table data CSV content for preview
+                      let csvContent = '';
+                      
+                      extractedData.forEach((table, tableIndex) => {
+                        // Add table header information
+                        csvContent += `\n=== BẢNG ${table.table} - TRANG ${table.page} ===\n`;
+                        csvContent += `Phương thức: ${table.method || 'N/A'}, Cells detected: ${table.cell_detection?.cells_detected || 0}\n\n`;
+                        
+                        // Add table data if available
+                        if (table.data && table.data.length > 0) {
+                          // Show ALL rows with scrollable container
+                          table.data.forEach((row, rowIndex) => {
+                            const cleanedRow = row.map(cell => {
+                              // Clean cell data - remove newlines and escape quotes for CSV
+                              const cellStr = String(cell || '').replace(/"/g, '""').replace(/\n/g, ' ').replace(/\r/g, ' ');
+                              return `"${cellStr}"`;
+                            });
+                            csvContent += cleanedRow.join(',') + '\n';
+                          });
+                        } else {
+                          csvContent += '"Không có dữ liệu cell nào được trích xuất"\n';
+                        }
+                        
+                        // Add separator between tables
+                        if (tableIndex < extractedData.length - 1) {
+                          csvContent += '\n';
+                        }
+                      });
+                      
                       return csvContent;
                     })()}
+                    
+                    {/* Scroll hint for large datasets */}
+                    {extractedData?.reduce((sum, table) => sum + (table.data?.length || 0), 0) > 10 && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          bottom: 8,
+                          right: 8,
+                          bgcolor: 'rgba(250, 112, 154, 0.8)',
+                          color: 'white',
+                          px: 1,
+                          py: 0.5,
+                          borderRadius: 1,
+                          fontSize: '0.7rem',
+                          fontWeight: 'bold',
+                          pointerEvents: 'none',
+                          animation: 'pulse 2s infinite',
+                          '@keyframes pulse': {
+                            '0%': { opacity: 0.7 },
+                            '50%': { opacity: 1 },
+                            '100%': { opacity: 0.7 },
+                          }
+                        }}
+                      >
+                        ↓ Cuộn xuống ↓
+                      </Box>
+                    )}
                   </Typography>
                 </Paper>
               </CardContent>
@@ -1143,7 +1307,7 @@ const PreviewPage = () => {
             </ListItemIcon>
             <ListItemText 
               primary="CSV File" 
-              secondary="Dữ liệu cells"
+              secondary="Dữ liệu bảng đã tái cấu trúc"
             />
           </MenuItem>
           
