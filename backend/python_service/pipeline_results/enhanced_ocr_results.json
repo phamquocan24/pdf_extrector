@@ -1,0 +1,300 @@
+{
+  "pipeline_stage": "complete",
+  "table_info": {},
+  "cell_detections": {
+    "cells": [
+      [
+        50,
+        50,
+        200,
+        100
+      ],
+      [
+        200,
+        50,
+        350,
+        100
+      ],
+      [
+        50,
+        100,
+        200,
+        150
+      ],
+      [
+        200,
+        100,
+        350,
+        150
+      ]
+    ]
+  },
+  "processing_steps": [
+    "enhanced_cell_processing",
+    "structured_table_creation"
+  ],
+  "enhanced_cell_results": [
+    {
+      "cell_id": 1,
+      "bbox": [
+        50,
+        50,
+        200,
+        100
+      ],
+      "padded_bbox": [
+        43,
+        48,
+        207,
+        102
+      ],
+      "text": "cell",
+      "confidence": 0.5,
+      "ocr_engine": "fallback",
+      "cell_size": "150x50",
+      "enhanced_processing": true,
+      "pipeline_step": "enhanced_processing",
+      "processing_order": 1,
+      "table_region": true
+    },
+    {
+      "cell_id": 2,
+      "bbox": [
+        200,
+        50,
+        350,
+        100
+      ],
+      "padded_bbox": [
+        193,
+        48,
+        357,
+        102
+      ],
+      "text": "cell",
+      "confidence": 0.5,
+      "ocr_engine": "fallback",
+      "cell_size": "150x50",
+      "enhanced_processing": true,
+      "pipeline_step": "enhanced_processing",
+      "processing_order": 2,
+      "table_region": true
+    },
+    {
+      "cell_id": 3,
+      "bbox": [
+        50,
+        100,
+        200,
+        150
+      ],
+      "padded_bbox": [
+        43,
+        98,
+        207,
+        152
+      ],
+      "text": "cell",
+      "confidence": 0.5,
+      "ocr_engine": "fallback",
+      "cell_size": "150x50",
+      "enhanced_processing": true,
+      "pipeline_step": "enhanced_processing",
+      "processing_order": 3,
+      "table_region": true
+    },
+    {
+      "cell_id": 4,
+      "bbox": [
+        200,
+        100,
+        350,
+        150
+      ],
+      "padded_bbox": [
+        193,
+        98,
+        357,
+        152
+      ],
+      "text": "cell",
+      "confidence": 0.5,
+      "ocr_engine": "fallback",
+      "cell_size": "150x50",
+      "enhanced_processing": true,
+      "pipeline_step": "enhanced_processing",
+      "processing_order": 4,
+      "table_region": true
+    }
+  ],
+  "structured_table": {
+    "structured_data": [
+      {
+        "position": "Row_50_Col_50",
+        "text": "cell",
+        "confidence": 0.5,
+        "engine": "fallback",
+        "bbox": [
+          50,
+          50,
+          200,
+          100
+        ]
+      },
+      {
+        "position": "Row_50_Col_200",
+        "text": "cell",
+        "confidence": 0.5,
+        "engine": "fallback",
+        "bbox": [
+          200,
+          50,
+          350,
+          100
+        ]
+      },
+      {
+        "position": "Row_100_Col_50",
+        "text": "cell",
+        "confidence": 0.5,
+        "engine": "fallback",
+        "bbox": [
+          50,
+          100,
+          200,
+          150
+        ]
+      },
+      {
+        "position": "Row_100_Col_200",
+        "text": "cell",
+        "confidence": 0.5,
+        "engine": "fallback",
+        "bbox": [
+          200,
+          100,
+          350,
+          150
+        ]
+      }
+    ],
+    "summary": {
+      "total_cells": 4,
+      "cells_with_text": 4,
+      "confidence_avg": 0.5,
+      "engines_used": [
+        "fallback"
+      ]
+    },
+    "enhanced_results": [
+      {
+        "cell_id": 1,
+        "bbox": [
+          50,
+          50,
+          200,
+          100
+        ],
+        "padded_bbox": [
+          43,
+          48,
+          207,
+          102
+        ],
+        "text": "cell",
+        "confidence": 0.5,
+        "ocr_engine": "fallback",
+        "cell_size": "150x50",
+        "enhanced_processing": true,
+        "pipeline_step": "enhanced_processing",
+        "processing_order": 1,
+        "table_region": true
+      },
+      {
+        "cell_id": 2,
+        "bbox": [
+          200,
+          50,
+          350,
+          100
+        ],
+        "padded_bbox": [
+          193,
+          48,
+          357,
+          102
+        ],
+        "text": "cell",
+        "confidence": 0.5,
+        "ocr_engine": "fallback",
+        "cell_size": "150x50",
+        "enhanced_processing": true,
+        "pipeline_step": "enhanced_processing",
+        "processing_order": 2,
+        "table_region": true
+      },
+      {
+        "cell_id": 3,
+        "bbox": [
+          50,
+          100,
+          200,
+          150
+        ],
+        "padded_bbox": [
+          43,
+          98,
+          207,
+          152
+        ],
+        "text": "cell",
+        "confidence": 0.5,
+        "ocr_engine": "fallback",
+        "cell_size": "150x50",
+        "enhanced_processing": true,
+        "pipeline_step": "enhanced_processing",
+        "processing_order": 3,
+        "table_region": true
+      },
+      {
+        "cell_id": 4,
+        "bbox": [
+          200,
+          100,
+          350,
+          150
+        ],
+        "padded_bbox": [
+          193,
+          98,
+          357,
+          152
+        ],
+        "text": "cell",
+        "confidence": 0.5,
+        "ocr_engine": "fallback",
+        "cell_size": "150x50",
+        "enhanced_processing": true,
+        "pipeline_step": "enhanced_processing",
+        "processing_order": 4,
+        "table_region": true
+      }
+    ],
+    "pipeline_info": {
+      "processing_method": "advanced_ocr_pipeline",
+      "cell_detection_method": "yolo_cell_model",
+      "ocr_method": "multi_engine_comprehensive",
+      "preprocessing": "advanced_multi_scale_enhancement"
+    },
+    "table_matrix": [
+      [
+        "cell",
+        "cell"
+      ],
+      [
+        "cell",
+        "cell"
+      ]
+    ]
+  }
+}
